@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StundenArchiv - Zeiterfassung</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <!-- PDF Generation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #1A237E;
+            --primary-light: #E8EAF6;
+            --secondary: #455A64;
+        }
+        body {
+            background-color: #F8FAFC;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        .sidebar-item.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            border-right: 4px solid var(--primary);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .mobile-nav { display: flex; }
+        }
+        @media (min-width: 769px) {
+            .mobile-nav { display: none; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row">
+
+    <!-- Firebase Initialisierung (Platzhalter) -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "",
+            authDomain: "dein-projekt.firebaseapp.com",
+            projectId: "dein-projekt",
+            storageBucket: "dein-projekt.appspot.com",
+            messagingSenderId: "12345",
+            appId: "1:12345:web:6789"
+        };
+        // firebase.initializeApp(firebaseConfig);
+        // const db = firebase.firestore();
+        // const auth = firebase.auth();
+    </script>
+
+    <!-- Desktop Sidebar -->
+    <aside class="sidebar w-64 bg-white border-r border-slate-200 flex-col hidden md:flex">
+        <div class="p-6">
+            <div class="flex items-center gap-2 text-indigo-900 font-bold text-xl">
+                <span class="material-icons-outlined">archive</span>
+                StundenArchiv
+            </div>
+        </div>
+        <nav class="flex-1 mt-4">
+            <a href="#" onclick="showPage('depts')" id="nav-depts" class="sidebar-item active flex items-center gap-3 px-6 py-4 hover:bg-slate-50 transition-colors">
+                <span class="material-icons-outlined">dashboard</span> Abteilungen
+            </a>
+            <a href="#" onclick="showPage('stats')" id="nav-stats" class="sidebar-item flex items-center gap-3 px-6 py-4 hover:bg-slate-50 transition-colors admin-only">
+                <span class="material-icons-outlined">analytics</span> Übersicht
+            </a>
+            <a href="#" onclick="showPage('admin')" id="nav-admin" class="sidebar-item flex items-center gap-3 px-6 py-4 hover:bg-slate-50 transition-colors admin-only">
+                <span class="material-icons-outlined">admin_panel_settings</span> Admin/Archiv
+            </a>
+        </nav>
+        <div class="p-6 border-t border-slate-100">
+            <button class="flex items-center gap-3 text-slate-500 hover:text-red-600 transition-colors">
+                <span class="material-icons-outlined">logout</span> Abmelden
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Top Bar -->
+    <header class="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2 text-indigo-900 font-bold text-lg">
+            <span class="material-icons-outlined">archive</span> StundenArchiv
+        </div>
+        <button class="text-slate-500"><span class="material-icons-outlined">account_circle</span></button>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-4 md:p-10 pb-24 md:pb-10 overflow-y-auto">
+        
+        <!-- Role Switcher (Preview Only) -->
+        <div class="mb-6 flex gap-2 bg-slate-200 p-1 rounded-lg w-fit">
+            <button onclick="setRole('admin')" id="role-admin" class="px-4 py-1 rounded-md text-sm font-medium bg-white shadow-sm">Geschäftsleiter</button>
+            <button onclick="setRole('manager')" id="role-manager" class="px-4 py-1 rounded-md text-sm font-medium">Abteilungsleiter</button>
+        </div>
+
+        <div id="content-area">
+            <!-- Dynamic Content -->
+        </div>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 px-4 flex justify-around items-center z-50">
+        <button onclick="showPage('depts')" class="flex flex-col items-center text-indigo-900">
+            <span class="material-icons-outlined">dashboard</span>
+            <span class="text-[10px]">Abteilungen</span>
+        </button>
+        <button onclick="showPage('stats')" class="flex flex-col items-center text-slate-400 admin-only">
+            <span class="material-icons-outlined">analytics</span>
+            <span class="text-[10px]">Übersicht</span>
+        </button>
+        <button onclick="showPage('admin')" class="flex flex-col items-center text-slate-400 admin-only">
+            <span class="material-icons-outlined">admin_panel_settings</span>
+            <span class="text-[10px]">Admin</span>
+        </button>
+    </nav>
+
+    <!-- Form Modal (Hidden by default) -->
+    <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Stunden eintragen</h2>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><span class="material-icons-outlined">close</span></button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Mitarbeiter</label>
+                    <select class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option>Max Mustermann</option>
+                        <option>Erika Muster</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Datum</label>
+                    <input type="date" class="w-full border border-slate-300 rounded-lg p-2.5" value="2023-10-27">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Stunden (Dezimal)</label>
+                    <input type="number" step="0.5" placeholder="8.5" class="w-full border border-slate-300 rounded-lg p-2.5">
+                </div>
+                <button onclick="closeModal()" class="w-full bg-indigo-900 text-white py-3 rounded-xl font-bold mt-4 hover:bg-indigo-800 transition-colors">
+                    Speichern
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRole = 'admin';
+        const departments = [
+            { name: "Rohrleitungsbau", emps: 12, hours: 450 },
+            { name: "Montage", emps: 8, hours: 320 },
+            { name: "Werkstatt", emps: 5, hours: 180 },
+            { name: "Offerte", emps: 3, hours: 95 }
+        ];
+
+        function setRole(role) {
+            currentRole = role;
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = role === 'admin' ? 'flex' : 'none';
+            });
+            // Update Toggle UI
+            document.getElementById('role-admin').className = role === 'admin' ? 'px-4 py-1 rounded-md text-sm font-medium bg-white shadow-sm' : 'px-4 py-1 rounded-md text-sm font-medium';
+            document.getElementById('role-manager').className = role === 'manager' ? 'px-4 py-1 rounded-md text-sm font-medium bg-white shadow-sm' : 'px-4 py-1 rounded-md text-sm font-medium';
+            showPage('depts');
+        }
+
+        function showPage(page) {
+            const container = document.getElementById('content-area');
+            
+            // Sidebar Active State
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById('nav-' + page);
+            if(activeNav) activeNav.classList.add('active');
+
+            if (page === 'depts') {
+                let html = `<h1 class="text-3xl font-black text-slate-800 mb-8">Abteilungen</h1>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`;
+                
+                const list = currentRole === 'admin' ? departments : [departments[1]];
+                
+                list.forEach(d => {
+                    html += `
+                        <div class="glass-card p-6 rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer" onclick="showDetail('${d.name}')">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                                    <span class="material-icons-outlined">groups</span>
+                                </div>
+                                <span class="bg-indigo-900 text-white text-xs font-bold px-3 py-1 rounded-full">${d.hours}h</span>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-800">${d.name}</h3>
+                            <p class="text-slate-500 text-sm mt-1">${d.emps} Mitarbeiter aktiv</p>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                container.innerHTML = html;
+            } 
+            else if (page === 'stats') {
+                container.innerHTML = `
+                    <h1 class="text-3xl font-black text-slate-800 mb-8">Firmenübersicht</h1>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+                        <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                            <p class="text-slate-500 font-medium uppercase text-xs tracking-wider">Gesamtstunden Monat</p>
+                            <h2 class="text-4xl font-black text-indigo-900 mt-2">1.045,5 h</h2>
+                        </div>
+                        <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                            <p class="text-slate-500 font-medium uppercase text-xs tracking-wider">Aktive Mitarbeiter</p>
+                            <h2 class="text-4xl font-black text-emerald-600 mt-2">28</h2>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <h3 class="font-bold">Stunden pro Mitarbeiter</h3>
+                            <button onclick="exportToPdf()" class="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors">
+                                <span class="material-icons-outlined text-sm">download</span> PDF Export
+                            </button>
+                        </div>
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+                                <tr>
+                                    <th class="px-6 py-4">Mitarbeiter</th>
+                                    <th class="px-6 py-4">Abteilung</th>
+                                    <th class="px-6 py-4">Woche</th>
+                                    <th class="px-6 py-4">Monat</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${['Max Mustermann', 'Erika Muster', 'Hans Schmidt'].map(name => `
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="px-6 py-4 font-bold text-slate-700">${name}</td>
+                                        <td class="px-6 py-4 text-slate-500">Montage</td>
+                                        <td class="px-6 py-4">38,5 h</td>
+                                        <td class="px-6 py-4 font-bold text-indigo-900">162,0 h</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            else if (page === 'admin') {
+                container.innerHTML = `
+                    <h1 class="text-3xl font-black text-slate-800 mb-8">Admin Center</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <section>
+                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-icons-outlined">settings</span> Verwaltung</h2>
+                            <div class="space-y-3">
+                                <button class="w-full text-left p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between hover:border-indigo-300 transition-colors">
+                                    <div class="flex items-center gap-4">
+                                        <div class="p-2 bg-slate-100 rounded-lg"><span class="material-icons-outlined">add_business</span></div>
+                                        <span class="font-bold text-slate-700">Abteilung hinzufügen</span>
+                                    </div>
+                                    <span class="material-icons-outlined text-slate-400">chevron_right</span>
+                                </button>
+                                <button class="w-full text-left p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between hover:border-indigo-300 transition-colors">
+                                    <div class="flex items-center gap-4">
+                                        <div class="p-2 bg-slate-100 rounded-lg"><span class="material-icons-outlined">person_add</span></div>
+                                        <span class="font-bold text-slate-700">Mitarbeiter anlegen</span>
+                                    </div>
+                                    <span class="material-icons-outlined text-slate-400">chevron_right</span>
+                                </button>
+                            </div>
+                        </section>
+                        <section>
+                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-icons-outlined">history</span> Archivierung</h2>
+                            <div class="bg-indigo-900 text-white p-6 rounded-3xl">
+                                <p class="text-indigo-200 text-sm mb-4">Der nächste automatische Archivlauf erfolgt am 01.01.2024. Alle Stunden von 2023 werden verschoben.</p>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-xl">
+                                        <span class="font-bold">Archiv 2022</span>
+                                        <span class="material-icons-outlined text-sm cursor-pointer hover:text-indigo-300">download</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-xl">
+                                        <span class="font-bold">Archiv 2021</span>
+                                        <span class="material-icons-outlined text-sm cursor-pointer hover:text-indigo-300">download</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                `;
+            }
+        }
+
+        function showDetail(name) {
+            const container = document.getElementById('content-area');
+            let html = `
+                <div class="flex items-center gap-4 mb-8">
+                    <button onclick="showPage('depts')" class="p-2 hover:bg-slate-200 rounded-full transition-colors"><span class="material-icons-outlined">arrow_back</span></button>
+                    <h1 class="text-3xl font-black text-slate-800">${name}</h1>
+                </div>
+                <div class="grid grid-cols-1 gap-4">
+                    ${[1,2,3].map(i => `
+                        <div class="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-bold text-slate-400">M${i}</div>
+                                <div>
+                                    <div class="font-bold text-slate-800">Mitarbeiter ${i}</div>
+                                    <div class="text-xs text-slate-400 uppercase font-bold tracking-tighter">ID: EMP-00${i}</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-8">
+                                <div class="text-center">
+                                    <div class="text-[10px] text-slate-400 uppercase font-bold">Woche</div>
+                                    <div class="font-bold text-indigo-900">40,0h</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-[10px] text-slate-400 uppercase font-bold">Monat</div>
+                                    <div class="font-bold text-indigo-900">160,5h</div>
+                                </div>
+                            </div>
+                            ${currentRole !== 'admin' ? `
+                                <button onclick="openModal()" class="w-full sm:w-auto bg-indigo-50 text-indigo-600 px-6 py-2 rounded-xl font-bold hover:bg-indigo-100 transition-colors">
+                                    Eintragen
+                                </button>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function openModal() { document.getElementById('modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        async function exportToPdf() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(20);
+            doc.text('StundenArchiv - Monatsbericht', 14, 22);
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text('Generiert am: ' + new Date().toLocaleDateString(), 14, 30);
+
+            const data = [
+                ['Max Mustermann', 'Montage', '162,0 h'],
+                ['Erika Muster', 'Montage', '158,5 h'],
+                ['Hans Schmidt', 'Montage', '160,0 h']
+            ];
+
+            doc.autoTable({
+                startY: 40,
+                head: [['Mitarbeiter', 'Abteilung', 'Stunden Monat']],
+                body: data,
+                theme: 'striped',
+                headStyles: { fillColor: [26, 35, 126] }
+            });
+
+            doc.save('Stundenbericht_Monat.pdf');
+        }
+
+        // Init App
+        setRole('admin');
+    </script>
+</body>
+</html>

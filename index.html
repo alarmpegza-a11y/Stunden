@@ -1,368 +1,641 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StundenArchiv - Zeiterfassung</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <!-- PDF Generation Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Users, 
+  Clipboard, 
+  FileText, 
+  Calendar, 
+  ChevronLeft, 
+  ChevronRight, 
+  Save, 
+  Plus, 
+  LayoutDashboard,
+  Archive,
+  Settings,
+  Trash2,
+  X,
+  ChevronDown
+} from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  serverTimestamp,
+  writeBatch,
+  getDocs,
+  deleteDoc
+} from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  signInWithCustomToken,
+  onAuthStateChanged 
+} from 'firebase/auth';
 
-    <style>
-        :root {
-            --primary: #1A237E;
-            --primary-light: #E8EAF6;
-            --secondary: #455A64;
+// Laden der PDF-Bibliotheken über CDN
+const loadScript = (src) => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+};
+
+// --- FIREBASE CONFIGURATION (DEIN PROJEKT) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAQPBKR6zWPySBvh2EHMgsj9cY1_idNjyg",
+  authDomain: "stunden-9ddd7.firebaseapp.com",
+  projectId: "stunden-9ddd7",
+  storageBucket: "stunden-9ddd7.firebasestorage.app",
+  messagingSenderId: "324186463586",
+  appId: "1:324186463586:web:ee4ed33cca2d8d0ac9a03b"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = "stunden-9ddd7"; 
+
+// --- CONSTANTS ---
+const CURRENT_DATE = new Date('2026-03-19');
+
+// --- UTILS ---
+const getWeekNumber = (d) => {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return [date.getUTCFullYear(), weekNo];
+};
+
+const formatNumber = (num) => num === 0 ? '–' : num.toFixed(1).replace('.', ',');
+
+// --- MAIN APP ---
+const App = () => {
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(true); 
+  const [activeTab, setActiveTab] = useState('dashboard'); 
+  const [selectedDept, setSelectedDept] = useState('rohrleitungsbau');
+  const [view, setView] = useState('week'); 
+  const [currentWeek, setCurrentWeek] = useState(getWeekNumber(CURRENT_DATE)[1]);
+  const [currentYear, setCurrentYear] = useState(2026);
+  const [archiveYear, setArchiveYear] = useState(2025);
+  
+  const [departments, setDepartments] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [hoursData, setHoursData] = useState([]);
+  
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [activeEmployee, setActiveEmployee] = useState(null);
+  const [showPdfMenu, setShowPdfMenu] = useState(false);
+  const [pdfLibLoaded, setPdfLibLoaded] = useState(false);
+
+  // PDF Bibliotheken laden
+  useEffect(() => {
+    const loadLibs = async () => {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js');
+      setPdfLibLoaded(true);
+    };
+    loadLibs();
+  }, []);
+
+  // Auth Fix: Behandelt Custom Token Fehler durch Fallback auf anonyme Anmeldung
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          try {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } catch (tokenErr) {
+            // Wenn der Token nicht zu deinem Projekt passt (mismatch), nutze anonyme Anmeldung
+            await signInAnonymously(auth);
+          }
+        } else {
+          await signInAnonymously(auth);
         }
-        body {
-            background-color: #F8FAFC;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        .sidebar-item.active {
-            background-color: var(--primary-light);
-            color: var(--primary);
-            border-right: 4px solid var(--primary);
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-        }
-        @media (max-width: 768px) {
-            .sidebar { display: none; }
-            .mobile-nav { display: flex; }
-        }
-        @media (min-width: 769px) {
-            .mobile-nav { display: none; }
-        }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col md:flex-row">
+      } catch (e) { 
+        console.error("Auth failed completely", e); 
+      }
+    };
+    initAuth();
+    const unsub = onAuthStateChanged(auth, (u) => { if (u) setUser(u); });
+    return () => unsub();
+  }, []);
 
-    <!-- Firebase Initialisierung (Platzhalter) -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "",
-            authDomain: "dein-projekt.firebaseapp.com",
-            projectId: "dein-projekt",
-            storageBucket: "dein-projekt.appspot.com",
-            messagingSenderId: "12345",
-            appId: "1:12345:web:6789"
-        };
-        // firebase.initializeApp(firebaseConfig);
-        // const db = firebase.firestore();
-        // const auth = firebase.auth();
-    </script>
-
-    <!-- Desktop Sidebar -->
-    <aside class="sidebar w-64 bg-white border-r border-slate-200 flex-col hidden md:flex">
-        <div class="p-6">
-            <div class="flex items-center gap-2 text-indigo-900 font-bold text-xl">
-                <span class="material-icons-outlined">archive</span>
-                StundenArchiv
-            </div>
-        </div>
-        <nav class="flex-1 mt-4">
-            <a href="#" onclick="showPage('depts')" id="nav-depts" class="sidebar-item active flex items-center gap-3 px-6 py-4 hover:bg-slate-50 transition-colors">
-                <span class="material-icons-outlined">dashboard</span> Abteilungen
-            </a>
-            <a href="#" onclick="showPage('stats')" id="nav-stats" class="sidebar-item flex items-center gap-3 px-6 py-4 hover:bg-slate-50 transition-colors admin-only">
-                <span class="material-icons-outlined">analytics</span> Übersicht
-            </a>
-            <a href="#" onclick="showPage('admin')" id="nav-admin" class="sidebar-item flex items-center gap-3 px-6 py-4 hover:bg-slate-50 transition-colors admin-only">
-                <span class="material-icons-outlined">admin_panel_settings</span> Admin/Archiv
-            </a>
-        </nav>
-        <div class="p-6 border-t border-slate-100">
-            <button class="flex items-center gap-3 text-slate-500 hover:text-red-600 transition-colors">
-                <span class="material-icons-outlined">logout</span> Abmelden
-            </button>
-        </div>
-    </aside>
-
-    <!-- Mobile Top Bar -->
-    <header class="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-50">
-        <div class="flex items-center gap-2 text-indigo-900 font-bold text-lg">
-            <span class="material-icons-outlined">archive</span> StundenArchiv
-        </div>
-        <button class="text-slate-500"><span class="material-icons-outlined">account_circle</span></button>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 p-4 md:p-10 pb-24 md:pb-10 overflow-y-auto">
-        
-        <!-- Role Switcher (Preview Only) -->
-        <div class="mb-6 flex gap-2 bg-slate-200 p-1 rounded-lg w-fit">
-            <button onclick="setRole('admin')" id="role-admin" class="px-4 py-1 rounded-md text-sm font-medium bg-white shadow-sm">Geschäftsleiter</button>
-            <button onclick="setRole('manager')" id="role-manager" class="px-4 py-1 rounded-md text-sm font-medium">Abteilungsleiter</button>
-        </div>
-
-        <div id="content-area">
-            <!-- Dynamic Content -->
-        </div>
-    </main>
-
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 px-4 flex justify-around items-center z-50">
-        <button onclick="showPage('depts')" class="flex flex-col items-center text-indigo-900">
-            <span class="material-icons-outlined">dashboard</span>
-            <span class="text-[10px]">Abteilungen</span>
-        </button>
-        <button onclick="showPage('stats')" class="flex flex-col items-center text-slate-400 admin-only">
-            <span class="material-icons-outlined">analytics</span>
-            <span class="text-[10px]">Übersicht</span>
-        </button>
-        <button onclick="showPage('admin')" class="flex flex-col items-center text-slate-400 admin-only">
-            <span class="material-icons-outlined">admin_panel_settings</span>
-            <span class="text-[10px]">Admin</span>
-        </button>
-    </nav>
-
-    <!-- Form Modal (Hidden by default) -->
-    <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] p-4">
-        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold">Stunden eintragen</h2>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><span class="material-icons-outlined">close</span></button>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Mitarbeiter</label>
-                    <select class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
-                        <option>Max Mustermann</option>
-                        <option>Erika Muster</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Datum</label>
-                    <input type="date" class="w-full border border-slate-300 rounded-lg p-2.5" value="2023-10-27">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Stunden (Dezimal)</label>
-                    <input type="number" step="0.5" placeholder="8.5" class="w-full border border-slate-300 rounded-lg p-2.5">
-                </div>
-                <button onclick="closeModal()" class="w-full bg-indigo-900 text-white py-3 rounded-xl font-bold mt-4 hover:bg-indigo-800 transition-colors">
-                    Speichern
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let currentRole = 'admin';
-        const departments = [
-            { name: "Rohrleitungsbau", emps: 12, hours: 450 },
-            { name: "Montage", emps: 8, hours: 320 },
-            { name: "Werkstatt", emps: 5, hours: 180 },
-            { name: "Offerte", emps: 3, hours: 95 }
+  // Fetch Abteilungen
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), (snap) => {
+      let depts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (depts.length === 0) {
+        const initial = [
+          { id: 'rohrleitungsbau', name: 'Rohrleitungsbau', sortOrder: 1 },
+          { id: 'montage', name: 'Montage', sortOrder: 2 },
+          { id: 'werkstatt', name: 'Werkstatt', sortOrder: 3 },
+          { id: 'offerte', name: 'Offerte', sortOrder: 4 }
         ];
+        initial.forEach(d => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', d.id), d));
+      }
+      setDepartments(depts.sort((a, b) => a.sortOrder - b.sortOrder));
+    }, (err) => console.error("Firestore Dept Error:", err));
+    return () => unsub();
+  }, [user]);
 
-        function setRole(role) {
-            currentRole = role;
-            document.querySelectorAll('.admin-only').forEach(el => {
-                el.style.display = role === 'admin' ? 'flex' : 'none';
-            });
-            // Update Toggle UI
-            document.getElementById('role-admin').className = role === 'admin' ? 'px-4 py-1 rounded-md text-sm font-medium bg-white shadow-sm' : 'px-4 py-1 rounded-md text-sm font-medium';
-            document.getElementById('role-manager').className = role === 'manager' ? 'px-4 py-1 rounded-md text-sm font-medium bg-white shadow-sm' : 'px-4 py-1 rounded-md text-sm font-medium';
-            showPage('depts');
+  // Fetch Mitarbeiter
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), where('active', '==', true));
+    const unsub = onSnapshot(q, (snap) => {
+      setEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => console.error("Firestore Emp Error:", err));
+    return () => unsub();
+  }, [user]);
+
+  // Fetch Stunden
+  useEffect(() => {
+    if (!user) return;
+    const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
+    const collectionName = activeTab === 'archive' ? `archive_${effectiveYear}` : 'hours';
+    const hoursRef = collection(db, 'artifacts', appId, 'public', 'data', collectionName);
+    const q = query(hoursRef, where('year', '==', effectiveYear));
+    
+    const unsub = onSnapshot(q, (snap) => {
+      setHoursData(snap.docs.map(doc => doc.data()));
+    }, (err) => console.error("Snapshot error:", err));
+    
+    return () => unsub();
+  }, [user, currentYear, archiveYear, activeTab]);
+
+  const filteredEmployees = useMemo(() => 
+    employees.filter(e => e.department === selectedDept),
+  [employees, selectedDept]);
+
+  const stats = useMemo(() => {
+    const res = {};
+    const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
+    filteredEmployees.forEach(emp => {
+      const empHours = hoursData.filter(h => h.employeeId === emp.id);
+      let weekTotal = 0, monthTotal = 0, yearTotal = 0;
+      const days = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+
+      empHours.forEach(h => {
+        if (h.year === effectiveYear) {
+          yearTotal += h.hours;
+          if (h.week === currentWeek) {
+            weekTotal += h.hours;
+            days[h.weekday] = h.hours;
+          }
+          const hDate = new Date(h.date);
+          if (hDate.getMonth() === CURRENT_DATE.getMonth() && hDate.getFullYear() === currentYear) monthTotal += h.hours;
         }
+      });
+      res[emp.id] = { weekTotal, monthTotal, yearTotal, days };
+    });
+    return res;
+  }, [filteredEmployees, hoursData, currentWeek, currentYear, archiveYear, activeTab]);
 
-        function showPage(page) {
-            const container = document.getElementById('content-area');
-            
-            // Sidebar Active State
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            const activeNav = document.getElementById('nav-' + page);
-            if(activeNav) activeNav.classList.add('active');
+  const copyToClipboard = () => {
+    let text = `KW${currentWeek} - ${currentYear}\n\n`;
+    filteredEmployees.forEach(emp => {
+      const s = stats[emp.id] || { weekTotal: 0, days: {} };
+      text += `${emp.name}\tKW${currentWeek}\t${s.weekTotal.toFixed(1).replace('.', ',')} h\n`;
+      text += `Mo ${formatNumber(s.days[1] || 0)}  Di ${formatNumber(s.days[2] || 0)}  Mi ${formatNumber(s.days[3] || 0)}  Do ${formatNumber(s.days[4] || 0)}  Fr ${formatNumber(s.days[5] || 0)}  Sa ${formatNumber(s.days[6] || 0)}  So ${formatNumber(s.days[7] || 0)}\n\n`;
+    });
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+  };
 
-            if (page === 'depts') {
-                let html = `<h1 class="text-3xl font-black text-slate-800 mb-8">Abteilungen</h1>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`;
-                
-                const list = currentRole === 'admin' ? departments : [departments[1]];
-                
-                list.forEach(d => {
-                    html += `
-                        <div class="glass-card p-6 rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer" onclick="showDetail('${d.name}')">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-                                    <span class="material-icons-outlined">groups</span>
-                                </div>
-                                <span class="bg-indigo-900 text-white text-xs font-bold px-3 py-1 rounded-full">${d.hours}h</span>
-                            </div>
-                            <h3 class="text-xl font-bold text-slate-800">${d.name}</h3>
-                            <p class="text-slate-500 text-sm mt-1">${d.emps} Mitarbeiter aktiv</p>
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-                container.innerHTML = html;
-            } 
-            else if (page === 'stats') {
-                container.innerHTML = `
-                    <h1 class="text-3xl font-black text-slate-800 mb-8">Firmenübersicht</h1>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
-                        <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                            <p class="text-slate-500 font-medium uppercase text-xs tracking-wider">Gesamtstunden Monat</p>
-                            <h2 class="text-4xl font-black text-indigo-900 mt-2">1.045,5 h</h2>
-                        </div>
-                        <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                            <p class="text-slate-500 font-medium uppercase text-xs tracking-wider">Aktive Mitarbeiter</p>
-                            <h2 class="text-4xl font-black text-emerald-600 mt-2">28</h2>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
-                            <h3 class="font-bold">Stunden pro Mitarbeiter</h3>
-                            <button onclick="exportToPdf()" class="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors">
-                                <span class="material-icons-outlined text-sm">download</span> PDF Export
-                            </button>
-                        </div>
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
-                                <tr>
-                                    <th class="px-6 py-4">Mitarbeiter</th>
-                                    <th class="px-6 py-4">Abteilung</th>
-                                    <th class="px-6 py-4">Woche</th>
-                                    <th class="px-6 py-4">Monat</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${['Max Mustermann', 'Erika Muster', 'Hans Schmidt'].map(name => `
-                                    <tr class="hover:bg-slate-50 transition-colors">
-                                        <td class="px-6 py-4 font-bold text-slate-700">${name}</td>
-                                        <td class="px-6 py-4 text-slate-500">Montage</td>
-                                        <td class="px-6 py-4">38,5 h</td>
-                                        <td class="px-6 py-4 font-bold text-indigo-900">162,0 h</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-            else if (page === 'admin') {
-                container.innerHTML = `
-                    <h1 class="text-3xl font-black text-slate-800 mb-8">Admin Center</h1>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <section>
-                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-icons-outlined">settings</span> Verwaltung</h2>
-                            <div class="space-y-3">
-                                <button class="w-full text-left p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between hover:border-indigo-300 transition-colors">
-                                    <div class="flex items-center gap-4">
-                                        <div class="p-2 bg-slate-100 rounded-lg"><span class="material-icons-outlined">add_business</span></div>
-                                        <span class="font-bold text-slate-700">Abteilung hinzufügen</span>
-                                    </div>
-                                    <span class="material-icons-outlined text-slate-400">chevron_right</span>
-                                </button>
-                                <button class="w-full text-left p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between hover:border-indigo-300 transition-colors">
-                                    <div class="flex items-center gap-4">
-                                        <div class="p-2 bg-slate-100 rounded-lg"><span class="material-icons-outlined">person_add</span></div>
-                                        <span class="font-bold text-slate-700">Mitarbeiter anlegen</span>
-                                    </div>
-                                    <span class="material-icons-outlined text-slate-400">chevron_right</span>
-                                </button>
-                            </div>
-                        </section>
-                        <section>
-                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-icons-outlined">history</span> Archivierung</h2>
-                            <div class="bg-indigo-900 text-white p-6 rounded-3xl">
-                                <p class="text-indigo-200 text-sm mb-4">Der nächste automatische Archivlauf erfolgt am 01.01.2024. Alle Stunden von 2023 werden verschoben.</p>
-                                <div class="space-y-2">
-                                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-xl">
-                                        <span class="font-bold">Archiv 2022</span>
-                                        <span class="material-icons-outlined text-sm cursor-pointer hover:text-indigo-300">download</span>
-                                    </div>
-                                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-xl">
-                                        <span class="font-bold">Archiv 2021</span>
-                                        <span class="material-icons-outlined text-sm cursor-pointer hover:text-indigo-300">download</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-                `;
-            }
+  // --- PDF GENERIERUNG ---
+  const handleExportPdf = (type) => {
+    if (!window.jspdf) {
+      alert("PDF-Bibliothek wird noch geladen...");
+      return;
+    }
+
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
+      
+      let title = "";
+      if (type === 'week') title = `PE-Fabrikation Stunden KW ${currentWeek} - ${effectiveYear}`;
+      else if (type === 'month') title = `PE-Fabrikation Stunden Monat ${CURRENT_DATE.toLocaleString('de-DE', { month: 'long' })} ${effectiveYear}`;
+      else title = `PE-Fabrikation Stunden Jahr ${effectiveYear}`;
+
+      doc.setFontSize(18);
+      doc.setTextColor(40);
+      doc.text(title, 14, 22);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Erstellt am: ${new Date().toLocaleDateString('de-DE')}`, 14, 30);
+
+      let currentY = 40;
+
+      departments.forEach(dept => {
+        const deptEmps = employees.filter(e => e.department === dept.id);
+        if (deptEmps.length === 0) return;
+
+        doc.setFontSize(14);
+        doc.setTextColor(0, 102, 204);
+        doc.text(dept.name, 14, currentY);
+        currentY += 5;
+
+        const tableData = deptEmps.map(emp => {
+          const empHours = hoursData.filter(h => h.employeeId === emp.id);
+          let sum = 0;
+          let dayDetail = "";
+
+          if (type === 'week') {
+            const weekHours = empHours.filter(h => h.week === currentWeek && h.year === effectiveYear);
+            const days = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+            weekHours.forEach(h => { days[h.weekday] = h.hours; sum += h.hours; });
+            dayDetail = `Mo: ${formatNumber(days[1])} | Di: ${formatNumber(days[2])} | Mi: ${formatNumber(days[3])} | Do: ${formatNumber(days[4])} | Fr: ${formatNumber(days[5])} | Sa: ${formatNumber(days[6])} | So: ${formatNumber(days[7])}`;
+          } else if (type === 'month') {
+            const monthHours = empHours.filter(h => new Date(h.date).getMonth() === CURRENT_DATE.getMonth() && h.year === effectiveYear);
+            monthHours.forEach(h => sum += h.hours);
+          } else {
+            const yearHours = empHours.filter(h => h.year === effectiveYear);
+            yearHours.forEach(h => sum += h.hours);
+          }
+
+          return [
+            emp.name,
+            type === 'week' ? dayDetail : '',
+            { content: `${sum.toFixed(1).replace('.', ',')} h`, styles: { fontStyle: 'bold' } }
+          ];
+        });
+
+        doc.autoTable({
+          startY: currentY,
+          head: [['Mitarbeiter', type === 'week' ? 'Tagesauflistung' : '', 'Summe']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [240, 240, 240], textColor: [50, 50, 50], fontStyle: 'bold' },
+          columnStyles: {
+            1: { fontSize: 8, textColor: [120, 120, 120] },
+            2: { halign: 'right' }
+          },
+          margin: { left: 14, right: 14 }
+        });
+
+        currentY = doc.lastAutoTable.finalY + 15;
+        
+        if (currentY > 250) {
+          doc.addPage();
+          currentY = 20;
         }
+      });
 
-        function showDetail(name) {
-            const container = document.getElementById('content-area');
-            let html = `
-                <div class="flex items-center gap-4 mb-8">
-                    <button onclick="showPage('depts')" class="p-2 hover:bg-slate-200 rounded-full transition-colors"><span class="material-icons-outlined">arrow_back</span></button>
-                    <h1 class="text-3xl font-black text-slate-800">${name}</h1>
+      doc.save(`${title.replace(/\s+/g, '_')}.pdf`);
+      setShowPdfMenu(false);
+    } catch (err) {
+      console.error("PDF Export failed:", err);
+      alert("Fehler beim Erstellen des PDFs.");
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col z-10 shadow-sm">
+        <div className="p-6 border-b border-slate-100">
+          <h1 className="text-xl font-bold text-blue-600 tracking-tight">PE-Fabrikation Stunden</h1>
+          <p className="text-xs text-slate-400 mt-1">v1.2 • Admin & Archiv</p>
+        </div>
+        
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all mb-4 ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            <LayoutDashboard size={20} />
+            <span className="text-sm font-semibold">Dashboard</span>
+          </button>
+
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Abteilungen</div>
+          {departments.map(dept => (
+            <button
+              key={dept.id}
+              onClick={() => { setSelectedDept(dept.id); if(activeTab === 'admin') setActiveTab('dashboard'); }}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${selectedDept === dept.id && activeTab !== 'admin' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <Users size={18} />
+              <span className="text-sm">{dept.name}</span>
+            </button>
+          ))}
+
+          {isAdmin && (
+            <>
+              <div className="pt-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Admin</div>
+              <button 
+                onClick={() => setActiveTab('admin')}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+              >
+                <Settings size={20} />
+                <span className="text-sm font-semibold">Verwaltung</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('archive')}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'archive' ? 'bg-amber-100 text-amber-800 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}
+              >
+                <Archive size={20} />
+                <span className="text-sm font-semibold">Archiv</span>
+              </button>
+            </>
+          )}
+        </nav>
+
+        <div className="p-4 border-t border-slate-100">
+          <div className="flex items-center gap-3 px-3 py-2 text-slate-400">
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <span className="text-xs truncate font-medium">{isAdmin ? 'Administrator' : 'Abteilungsleiter'}</span>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {activeTab === 'admin' ? (
+          <AdminManagement departments={departments} employees={employees} appId={appId} db={db} />
+        ) : (
+          <>
+            <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm">
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col">
+                  {activeTab === 'archive' ? (
+                    <div className="flex items-center gap-3">
+                       <span className="text-2xl font-black text-amber-600">ARCHIV {archiveYear}</span>
+                       <select 
+                        value={archiveYear} 
+                        onChange={(e) => setArchiveYear(parseInt(e.target.value))}
+                        className="bg-slate-100 border-none rounded-lg text-sm font-bold px-2 py-1"
+                       >
+                         {[2025, 2024, 2023].map(y => <option key={y} value={y}>{y}</option>)}
+                       </select>
+                    </div>
+                  ) : (
+                    <span className="text-2xl font-black text-slate-800 uppercase tracking-tighter">
+                      KW {currentWeek} <span className="text-slate-300 font-light mx-2">|</span> {currentYear}
+                    </span>
+                  )}
+                  <div className="flex gap-2 mt-1">
+                     <button onClick={() => setCurrentWeek(w => Math.max(1, w-1))} className="p-1 hover:bg-slate-100 rounded"><ChevronLeft size={16}/></button>
+                     <button onClick={() => setCurrentWeek(w => Math.min(52, w+1))} className="p-1 hover:bg-slate-100 rounded"><ChevronRight size={16}/></button>
+                  </div>
                 </div>
-                <div class="grid grid-cols-1 gap-4">
-                    ${[1,2,3].map(i => `
-                        <div class="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-bold text-slate-400">M${i}</div>
-                                <div>
-                                    <div class="font-bold text-slate-800">Mitarbeiter ${i}</div>
-                                    <div class="text-xs text-slate-400 uppercase font-bold tracking-tighter">ID: EMP-00${i}</div>
-                                </div>
-                            </div>
-                            <div class="flex gap-8">
-                                <div class="text-center">
-                                    <div class="text-[10px] text-slate-400 uppercase font-bold">Woche</div>
-                                    <div class="font-bold text-indigo-900">40,0h</div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-[10px] text-slate-400 uppercase font-bold">Monat</div>
-                                    <div class="font-bold text-indigo-900">160,5h</div>
-                                </div>
-                            </div>
-                            ${currentRole !== 'admin' ? `
-                                <button onclick="openModal()" class="w-full sm:w-auto bg-indigo-50 text-indigo-600 px-6 py-2 rounded-xl font-bold hover:bg-indigo-100 transition-colors">
-                                    Eintragen
-                                </button>
-                            ` : ''}
-                        </div>
-                    `).join('')}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button onClick={() => setView('week')} className={`px-4 py-2 rounded-lg text-sm font-medium ${view === 'week' ? 'bg-slate-800 text-white' : 'bg-slate-100'}`}>Woche</button>
+                <button onClick={() => setView('month')} className={`px-4 py-2 rounded-lg text-sm font-medium ${view === 'month' ? 'bg-slate-800 text-white' : 'bg-slate-100'}`}>Monat</button>
+                <button onClick={() => setView('year')} className={`px-4 py-2 rounded-lg text-sm font-medium ${view === 'year' ? 'bg-slate-800 text-white' : 'bg-slate-100'}`}>Jahr</button>
+                <div className="w-[1px] h-6 bg-slate-200 mx-2"></div>
+                
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowPdfMenu(!showPdfMenu)}
+                    className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 shadow-sm"
+                  >
+                    <FileText size={16} /> PDF <ChevronDown size={14} />
+                  </button>
+                  {showPdfMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in slide-in-from-top-2">
+                      <button onClick={() => handleExportPdf('week')} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50">PDF diese Woche</button>
+                      <button onClick={() => handleExportPdf('month')} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50">PDF aktueller Monat</button>
+                      <button onClick={() => handleExportPdf('year')} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50">PDF laufendes Jahr</button>
+                    </div>
+                  )}
                 </div>
-            `;
-            container.innerHTML = html;
-        }
 
-        function openModal() { document.getElementById('modal').style.display = 'flex'; }
-        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+                <button onClick={copyToClipboard} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 shadow-md">
+                  <Clipboard size={16} /> Kopieren
+                </button>
+              </div>
+            </header>
 
-        async function exportToPdf() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            doc.setFontSize(20);
-            doc.text('StundenArchiv - Monatsbericht', 14, 22);
-            doc.setFontSize(11);
-            doc.setTextColor(100);
-            doc.text('Generiert am: ' + new Date().toLocaleDateString(), 14, 30);
+            <div className="flex-1 overflow-y-auto p-8">
+              <div className="max-w-4xl mx-auto space-y-6">
+                {filteredEmployees.map(emp => {
+                  const s = stats[emp.id] || { weekTotal: 0, monthTotal: 0, yearTotal: 0, days: {} };
+                  const displayTotal = view === 'month' ? s.monthTotal : (view === 'year' ? s.yearTotal : s.weekTotal);
+                  return (
+                    <div 
+                      key={emp.id}
+                      onClick={() => { if(activeTab !== 'archive') { setActiveEmployee(emp); setEditModalOpen(true); } }}
+                      className={`bg-white border border-slate-200 rounded-2xl p-6 shadow-sm transition-all ${activeTab === 'archive' ? 'opacity-90' : 'hover:shadow-md cursor-pointer group hover:border-blue-200'}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-2xl font-bold text-slate-800 group-hover:text-blue-600">{emp.name}</h3>
+                          {view === 'week' && (
+                            <div className="mt-4 flex gap-4 text-sm font-medium text-slate-400">
+                              {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((day, idx) => (
+                                <div key={day} className="flex flex-col items-center min-w-[40px]">
+                                  <span className="text-[10px] uppercase mb-1">{day}</span>
+                                  <span className={s.days[idx+1] > 0 ? 'text-slate-800 font-bold' : 'text-slate-200'}>{formatNumber(s.days[idx+1] || 0)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-5xl font-black text-slate-900 tracking-tighter">
+                            {displayTotal.toFixed(1).replace('.', ',')}
+                            <span className="text-lg font-normal text-slate-400 ml-2">h</span>
+                          </div>
+                          <div className="text-xs font-bold text-blue-500 uppercase mt-1 tracking-widest">
+                            {view === 'month' ? 'Monats-Summe' : (view === 'year' ? 'Jahres-Summe' : 'Wochen-Summe')}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+      </main>
 
-            const data = [
-                ['Max Mustermann', 'Montage', '162,0 h'],
-                ['Erika Muster', 'Montage', '158,5 h'],
-                ['Hans Schmidt', 'Montage', '160,0 h']
-            ];
+      {isEditModalOpen && activeEmployee && (
+        <EditModal 
+          employee={activeEmployee} 
+          week={currentWeek} 
+          year={currentYear}
+          initialData={stats[activeEmployee.id]?.days}
+          onClose={() => setEditModalOpen(false)}
+          appId={appId}
+          db={db}
+          user={user}
+        />
+      )}
+    </div>
+  );
+};
 
-            doc.autoTable({
-                startY: 40,
-                head: [['Mitarbeiter', 'Abteilung', 'Stunden Monat']],
-                body: data,
-                theme: 'striped',
-                headStyles: { fillColor: [26, 35, 126] }
-            });
+// --- ADMIN MANAGEMENT SUB-SCREEN ---
+const AdminManagement = ({ departments, employees, appId, db }) => {
+  const [newDeptName, setNewDeptName] = useState('');
+  const [newEmpName, setNewEmpName] = useState('');
+  const [newEmpDept, setNewEmpDept] = useState('');
 
-            doc.save('Stundenbericht_Monat.pdf');
-        }
+  const addDepartment = async (e) => {
+    e.preventDefault();
+    if (!newDeptName) return;
+    const id = newDeptName.toLowerCase().replace(/\s+/g, '-');
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', id), {
+      name: newDeptName,
+      sortOrder: departments.length + 1
+    });
+    setNewDeptName('');
+  };
 
-        // Init App
-        setRole('admin');
-    </script>
-</body>
-</html>
+  const addEmployee = async (e) => {
+    e.preventDefault();
+    if (!newEmpName || !newEmpDept) return;
+    const id = `emp_${Date.now()}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), {
+      name: newEmpName,
+      department: newEmpDept,
+      active: true
+    });
+    setNewEmpName('');
+  };
+
+  const deleteEmployee = async (id) => {
+    if (window.confirm("Mitarbeiter wirklich löschen?")) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { active: false }, { merge: true });
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-12 bg-white">
+      <div className="max-w-5xl mx-auto space-y-12">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 mb-8 uppercase tracking-tighter">Verwaltung</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <section className="space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2"><Settings size={20} className="text-blue-500"/> Abteilungen</h3>
+              <form onSubmit={addDepartment} className="flex gap-2">
+                <input value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="Neue Abteilung..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500" />
+                <button type="submit" className="bg-blue-600 text-white p-2 rounded-xl hover:bg-blue-700"><Plus/></button>
+              </form>
+              <div className="space-y-2">
+                {departments.map(d => (
+                  <div key={d.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="font-semibold">{d.name}</span>
+                    <button onClick={async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', d.id))} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section className="space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2"><Users size={20} className="text-green-500"/> Mitarbeiter</h3>
+              <form onSubmit={addEmployee} className="space-y-2">
+                <input value={newEmpName} onChange={(e) => setNewEmpName(e.target.value)} placeholder="Vollständiger Name..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500" />
+                <div className="flex gap-2">
+                  <select value={newEmpDept} onChange={(e) => setNewEmpDept(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Abteilung wählen...</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                  <button type="submit" className="bg-green-600 text-white px-6 rounded-xl hover:bg-green-700 font-bold">Anlegen</button>
+                </div>
+              </form>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                {employees.map(e => (
+                  <div key={e.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div>
+                      <div className="font-semibold">{e.name}</div>
+                      <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{e.department}</div>
+                    </div>
+                    <button onClick={() => deleteEmployee(e.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EditModal = ({ employee, week, year, initialData, onClose, appId, db, user }) => {
+  const [formData, setFormData] = useState({ 1: initialData?.[1] || 0, 2: initialData?.[2] || 0, 3: initialData?.[3] || 0, 4: initialData?.[4] || 0, 5: initialData?.[5] || 0, 6: initialData?.[6] || 0, 7: initialData?.[7] || 0 });
+  const [holidays, setHolidays] = useState({ 1: false, 2: false, 3: false, 4: false, 5: false, 6: false, 7: false });
+  const [saving, setSaving] = useState(false);
+  const days = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const batch = writeBatch(db);
+      for (let i = 1; i <= 7; i++) {
+        const docId = `h_${year}_${week}_${employee.id}_${i}`;
+        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId);
+        batch.set(ref, {
+          employeeId: employee.id,
+          department: employee.department,
+          year: year,
+          week: week,
+          weekday: i,
+          hours: holidays[i] ? 0 : parseFloat(formData[i] || 0),
+          isHoliday: holidays[i],
+          date: new Date(year, 0, (week - 1) * 7 + (i - 1) + 4).toISOString(),
+          createdBy: user.uid,
+          createdAt: serverTimestamp()
+        });
+      }
+      await batch.commit();
+      onClose();
+    } catch (e) { console.error(e); alert("Fehler beim Speichern."); } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-in-center">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">{employee.name}</h2>
+            <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Eingabe KW {week} — {year}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"><X size={24} /></button>
+        </div>
+        <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
+          {days.map((day, idx) => {
+            const i = idx + 1;
+            return (
+              <div key={day} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-2xl transition-colors">
+                <div className="w-24 text-sm font-bold text-slate-600">{day}</div>
+                <input type="number" step="0.5" disabled={holidays[i]} value={formData[i]} onChange={(e) => setFormData({...formData, [i]: e.target.value})} className={`flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all ${holidays[i] ? 'opacity-30 bg-slate-100' : ''}`} />
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" checked={holidays[i]} onChange={(e) => setHolidays({...holidays, [i]: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 cursor-pointer" />
+                  <span className="text-[10px] font-black text-slate-300 group-hover:text-blue-500 uppercase tracking-tighter transition-colors">Feiertag</span>
+                </label>
+              </div>
+            );
+          })}
+        </div>
+        <div className="p-6 bg-slate-50 flex gap-3">
+          <button onClick={onClose} className="flex-1 py-4 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-2xl transition-colors">Abbrechen</button>
+          <button onClick={handleSave} disabled={saving} className="flex-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white py-4 px-8 rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2">
+            {saving ? '...' : <><Save size={18} /> Speichern</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;

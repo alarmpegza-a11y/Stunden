@@ -1,420 +1,527 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PE-Fabrikation | Management System</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Users, 
+  Archive, 
+  Calendar, 
+  ChevronLeft, 
+  ChevronRight, 
+  LayoutDashboard,
+  Settings,
+  Trash2,
+  X,
+  Download,
+  Search,
+  History
+} from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  serverTimestamp,
+  deleteDoc
+} from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  signInWithCustomToken,
+  onAuthStateChanged 
+} from 'firebase/auth';
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+// --- FIREBASE KONFIGURATION ---
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'stunden-9ddd7'; 
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #e5e7eb; margin: 0; }
-        .sidebar-active { background: #4f46e5; color: white; }
-        .custom-shadow { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
+// --- HILFSFUNKTIONEN ---
+const CURRENT_DATE = new Date('2026-03-19');
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+const getWeekNumber = (d) => {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return [date.getUTCFullYear(), weekNo];
+};
 
-        const initApp = () => {
-            try {
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-                    apiKey: "AIzaSyAQPBKR6zWPySBvh2EHMgsj9cY1_idNjyg",
-                    authDomain: "stunden-9ddd7.firebaseapp.com",
-                    projectId: "stunden-9ddd7"
-                };
-                const appId = typeof __app_id !== 'undefined' ? __app_id : "stunden-9ddd7";
-                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                return { db: firebase.firestore(), auth: firebase.auth(), appId };
-            } catch (err) {
-                return null;
-            }
-        };
+const loadScript = (src) => {
+  return new Promise((resolve) => {
+    if (document.querySelector(`script[src="${src}"]`)) return resolve(true);
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+};
 
-        const fb = initApp();
+// --- KOMPONENTEN ---
 
-        const LucideIcon = ({ name, size = 18, className = "" }) => {
-            const icons = {
-                FileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>,
-                Settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>,
-                Archive: <><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></>,
-                Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
-                Layout: <><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></>,
-                Trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
-                AlertCircle: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>
-            };
-            return <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name] || null}</svg>;
-        };
+const AdminManagement = ({ departments, employees, appId, db, user }) => {
+  const [newDeptName, setNewDeptName] = useState('');
+  const [newEmpName, setNewEmpName] = useState('');
+  const [newEmpDept, setNewEmpDept] = useState('');
 
-        const getWeekNumber = (d) => {
-            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-        };
+  const addDepartment = async (e) => {
+    e.preventDefault();
+    if (!newDeptName || !user) return;
+    const id = newDeptName.toLowerCase().replace(/\s+/g, '-');
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', id), {
+      name: newDeptName,
+      sortOrder: departments.length + 1
+    });
+    setNewDeptName('');
+  };
 
-        const App = () => {
-            if (!fb) return <div className="p-10">Fehler beim Laden von Firebase.</div>;
-            const { db, auth, appId } = fb;
+  const addEmployee = async (e) => {
+    e.preventDefault();
+    if (!newEmpName || !newEmpDept || !user) return;
+    const id = `emp_${Date.now()}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), {
+      name: newEmpName,
+      department: newEmpDept,
+      active: true
+    });
+    setNewEmpName('');
+  };
 
-            const [user, setUser] = useState(null);
-            const [view, setView] = useState('dashboard');
-            const [selectedDept, setSelectedDept] = useState('');
-            const [currentWeek, setCurrentWeek] = useState(getWeekNumber(new Date()));
-            const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-            const [showPdfMenu, setShowPdfMenu] = useState(false);
-            
-            const [depts, setDepts] = useState([]);
-            const [employees, setEmployees] = useState([]);
-            const [hours, setHours] = useState([]);
-            const [holidays, setHolidays] = useState([]);
+  const deleteEmployee = async (id) => {
+    if (!user) return;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { active: false }, { merge: true });
+  };
 
-            useEffect(() => {
-                const initAuth = async () => {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await auth.signInWithCustomToken(__initial_auth_token);
-                    } else {
-                        await auth.signInAnonymously();
-                    }
-                };
-                initAuth();
-                const unsubscribe = auth.onAuthStateChanged(setUser);
-                return () => unsubscribe();
-            }, []);
+  const deleteDepartment = async (id) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', id));
+  };
 
-            useEffect(() => {
-                if (!user) return;
-                const publicRef = db.collection('artifacts').doc(appId).collection('public').doc('data');
-
-                const unsub1 = publicRef.collection('departments').onSnapshot(s => {
-                    const d = s.docs.map(doc => ({id: doc.id, ...doc.data()}));
-                    setDepts(d);
-                    if (d.length && !selectedDept) setSelectedDept(d[0].id);
-                });
-
-                const unsub2 = publicRef.collection('employees').onSnapshot(s => {
-                    setEmployees(s.docs.map(doc => ({id: doc.id, ...doc.data()})));
-                });
-
-                const unsub3 = publicRef.collection('hours')
-                    .where('year', '==', currentYear)
-                    .where('week', '==', currentWeek)
-                    .onSnapshot(s => setHours(s.docs.map(doc => doc.data())));
-
-                const unsub4 = publicRef.collection('holidays')
-                    .where('year', '==', currentYear)
-                    .where('week', '==', currentWeek)
-                    .onSnapshot(s => setHolidays(s.docs.map(doc => doc.data())));
-                
-                return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
-            }, [user, currentWeek, currentYear]);
-
-            const exportPDF = (type) => {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                
-                doc.setFontSize(20);
-                doc.text(`Zeiterfassung - ${type === 'week' ? 'Woche' : 'Jahr'}`, 14, 20);
-                doc.setFontSize(12);
-                doc.text(`Zeitraum: KW ${currentWeek} / ${currentYear}`, 14, 30);
-
-                const tableData = [];
-                const targetDepts = type === 'all' ? depts : depts.filter(d => d.id === selectedDept);
-
-                targetDepts.forEach(dept => {
-                    const deptEmps = employees.filter(e => e.department === dept.id);
-                    deptEmps.forEach(emp => {
-                        const total = hours.filter(h => h.employeeId === emp.id).reduce((s, h) => s + (h.hours || 0), 0);
-                        tableData.push([dept.name, emp.name, total.toFixed(2) + " h"]);
-                    });
-                });
-
-                doc.autoTable({
-                    startY: 40,
-                    head: [['Abteilung', 'Mitarbeiter', 'Stunden']],
-                    body: tableData,
-                });
-
-                doc.save(`Export_${currentYear}_KW${currentWeek}.pdf`);
-                setShowPdfMenu(false);
-            };
-
-            const toggleHoliday = async (day) => {
-                const docId = `hol_${currentYear}_${currentWeek}_${day}`;
-                const exists = holidays.find(h => h.weekday === day);
-                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('holidays').doc(docId);
-                if (exists) {
-                    await ref.delete();
-                } else {
-                    await ref.set({ year: currentYear, week: currentWeek, weekday: day, isHoliday: true });
-                }
-            };
-
-            const saveHours = async (empId, day, val) => {
-                const docId = `h_${currentYear}_${currentWeek}_${empId}_${day}`;
-                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('hours').doc(docId).set({
-                    employeeId: empId, year: currentYear, week: currentWeek, weekday: day, hours: parseFloat(val) || 0
-                });
-            };
-
-            const deleteItem = async (col, id) => {
-                if(confirm("Möchten Sie dieses Element wirklich löschen?")) {
-                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(col).doc(id).delete();
-                }
-            };
-
-            return (
-                <div className="flex h-screen overflow-hidden">
-                    {/* Sidebar */}
-                    <aside className="w-64 bg-[#1e2330] text-white flex flex-col">
-                        <div className="p-6 flex items-center gap-3">
-                            <div className="bg-indigo-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold">PE</div>
-                            <span className="font-bold tracking-tight text-lg">MANAGEMENT</span>
-                        </div>
-
-                        <nav className="mt-4 px-3 space-y-1">
-                            <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${view === 'dashboard' ? 'sidebar-active' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                                <LucideIcon name="Layout" size={18}/> Dashboard
-                            </button>
-                            <button onClick={() => setView('archive')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${view === 'archive' ? 'sidebar-active' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                                <LucideIcon name="Archive" size={18}/> Archiv
-                            </button>
-                            <button onClick={() => setView('admin')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${view === 'admin' ? 'sidebar-active' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                                <LucideIcon name="Settings" size={18}/> Verwaltung
-                            </button>
-                        </nav>
-
-                        <div className="mt-10 px-6">
-                            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">BEREICHE</h3>
-                            <div className="space-y-2 overflow-y-auto max-h-64 custom-scrollbar">
-                                {depts.map(d => (
-                                    <button 
-                                        key={d.id} 
-                                        onClick={() => {setSelectedDept(d.id); setView('dashboard');}}
-                                        className={`w-full text-left text-sm py-1 transition-all ${selectedDept === d.id && view === 'dashboard' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-300'}`}
-                                    >
-                                        {d.name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </aside>
-
-                    {/* Main Content */}
-                    <main className="flex-1 flex flex-col bg-[#f3f4f6]">
-                        {/* Header */}
-                        <header className="bg-white h-16 flex items-center justify-between px-8 border-b border-slate-200">
-                            <div className="flex items-center gap-4">
-                                <h1 className="text-xl font-bold text-slate-800">Zeiterfassung</h1>
-                                <div className="flex items-center bg-slate-100 rounded-lg p-1 gap-1">
-                                    <button onClick={() => setCurrentWeek(w => w > 1 ? w - 1 : 52)} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded transition-all text-slate-500">×</button>
-                                    <span className="px-3 font-semibold text-sm">KW {currentWeek}</span>
-                                    <button onClick={() => setCurrentWeek(w => w < 52 ? w + 1 : 1)} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded transition-all text-slate-500">+</button>
-                                </div>
-                            </div>
-
-                            <div className="relative">
-                                <button 
-                                    onClick={() => setShowPdfMenu(!showPdfMenu)}
-                                    className="bg-[#4f46e5] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all custom-shadow"
-                                >
-                                    <LucideIcon name="Download" size={16}/> PDF Export
-                                </button>
-                                {showPdfMenu && (
-                                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 p-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                                        <button onClick={() => exportPDF('week')} className="w-full text-left px-4 py-3 text-sm font-semibold hover:bg-slate-50 rounded-lg">Wochen-PDF (Abt.)</button>
-                                        <button onClick={() => exportPDF('all')} className="w-full text-left px-4 py-3 text-sm font-semibold hover:bg-slate-50 rounded-lg border-t border-slate-100">Wochen-PDF (Alle Abt.)</button>
-                                        <button onClick={() => exportPDF('year')} className="w-full text-left px-4 py-3 text-sm font-semibold hover:bg-slate-50 rounded-lg border-t border-slate-100">Jahres-PDF</button>
-                                    </div>
-                                )}
-                            </div>
-                        </header>
-
-                        {/* Content Scroll Area */}
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                            {view === 'dashboard' && (
-                                <div className="max-w-6xl mx-auto space-y-6">
-                                    {/* Holiday Bar */}
-                                    <div className="bg-white p-6 rounded-2xl border border-slate-200 flex items-center justify-between shadow-sm">
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">FEIERTAGE KW {currentWeek}:</span>
-                                        <div className="flex gap-2">
-                                            {['Mo','Di','Mi','Do','Fr','Sa','So'].map((day, idx) => {
-                                                const dayNum = idx + 1;
-                                                const isHol = holidays.some(h => h.weekday === dayNum);
-                                                return (
-                                                    <button 
-                                                        key={day} 
-                                                        onClick={() => toggleHoliday(dayNum)}
-                                                        className={`w-12 py-2 rounded-lg text-xs font-bold transition-all border ${isHol ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
-                                                    >
-                                                        {day}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Employee List */}
-                                    <div className="grid gap-4">
-                                        {employees.filter(e => e.department === selectedDept).map(emp => {
-                                            const empHours = hours.filter(h => h.employeeId === emp.id);
-                                            const total = empHours.reduce((s, h) => s + (h.hours || 0), 0);
-                                            return (
-                                                <div key={emp.id} className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-center gap-8 shadow-sm hover:shadow-md transition-shadow">
-                                                    <div className="w-48">
-                                                        <h3 className="font-bold text-slate-800 truncate">{emp.name}</h3>
-                                                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">ID: {emp.id.substring(0,6)}</p>
-                                                    </div>
-
-                                                    <div className="flex-1 flex gap-3">
-                                                        {[1,2,3,4,5,6,7].map(day => {
-                                                            const isHol = holidays.some(h => h.weekday === day);
-                                                            const currentH = empHours.find(h => h.weekday === day)?.hours;
-                                                            return (
-                                                                <div key={day} className="flex flex-col items-center gap-1">
-                                                                    <span className="text-[10px] text-slate-300 font-bold">{['Mo','Di','Mi','Do','Fr','Sa','So'][day-1]}</span>
-                                                                    <div className="relative group">
-                                                                        <input 
-                                                                            type="number"
-                                                                            value={currentH || ''}
-                                                                            placeholder="0"
-                                                                            onChange={(e) => saveHours(emp.id, day, e.target.value)}
-                                                                            className={`w-12 h-12 text-center rounded-xl font-bold text-sm border-2 transition-all outline-none ${isHol ? 'bg-indigo-50 border-indigo-200 focus:border-indigo-400' : 'bg-slate-50 border-slate-100 focus:border-indigo-300'}`}
-                                                                        />
-                                                                        {isHol && currentH > 0 && (
-                                                                            <div className="absolute -top-2 -right-2 text-amber-500 bg-white rounded-full" title="Achtung Feiertag!">
-                                                                                <LucideIcon name="AlertCircle" size={14}/>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-
-                                                    <div className="bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100 text-right min-w-[120px]">
-                                                        <div className="text-[10px] font-bold text-slate-400 uppercase">Summe</div>
-                                                        <div className="text-2xl font-black text-indigo-600">{total.toFixed(1)} <span className="text-xs font-normal">h</span></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {view === 'archive' && (
-                                <div className="max-w-4xl mx-auto">
-                                    <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
-                                        <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                                            <div>
-                                                <h3 className="text-lg font-bold">Jahresübersicht</h3>
-                                                <p className="text-sm text-slate-500">Wählen Sie ein Jahr für den PDF-Gesamtexport aller Abteilungen.</p>
-                                            </div>
-                                        </div>
-                                        <div className="p-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            {[2024, 2025, 2026, 2027].map(year => (
-                                                <div key={year} className="group p-6 rounded-2xl border-2 border-slate-100 hover:border-indigo-200 transition-all text-center">
-                                                    <div className="text-xl font-bold mb-4">{year}</div>
-                                                    <button 
-                                                        onClick={() => exportPDF('all')}
-                                                        className="w-full bg-slate-50 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all"
-                                                    >
-                                                        Alle Abteilungen
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {view === 'admin' && (
-                                <div className="max-w-4xl mx-auto space-y-10">
-                                    {/* Departments Admin */}
-                                    <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                                        <h3 className="text-lg font-bold mb-6">Abteilungen verwalten</h3>
-                                        <form className="flex gap-4 mb-8" onSubmit={async (e) => {
-                                            e.preventDefault();
-                                            const name = e.target.deptName.value;
-                                            if(!name) return;
-                                            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('departments').add({ name });
-                                            e.target.reset();
-                                        }}>
-                                            <input name="deptName" placeholder="Neue Abteilung (z.B. Logistik)" className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-300" required />
-                                            <button className="bg-slate-900 text-white px-6 rounded-xl font-bold text-sm">Hinzufügen</button>
-                                        </form>
-
-                                        <div className="space-y-2">
-                                            {depts.map(d => (
-                                                <div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 group">
-                                                    <span className="font-semibold">{d.name}</span>
-                                                    <button onClick={() => deleteItem('departments', d.id)} className="text-slate-300 hover:text-red-500 transition-all">
-                                                        <LucideIcon name="Trash" size={18}/>
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </section>
-
-                                    {/* Employee Admin */}
-                                    <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                                        <h3 className="text-lg font-bold mb-6">Mitarbeiter verwalten</h3>
-                                        <form className="flex flex-wrap gap-4 mb-8" onSubmit={async (e) => {
-                                            e.preventDefault();
-                                            const name = e.target.empName.value;
-                                            const deptId = e.target.empDept.value;
-                                            if(!name || !deptId) return;
-                                            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('employees').add({ name, department: deptId });
-                                            e.target.reset();
-                                        }}>
-                                            <input name="empName" placeholder="Name des Mitarbeiters" className="flex-1 min-w-[200px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-300" required />
-                                            <select name="empDept" className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-300" required>
-                                                <option value="">Abteilung wählen...</option>
-                                                {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                            </select>
-                                            <button className="bg-indigo-600 text-white px-6 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all">Hinzufügen</button>
-                                        </form>
-
-                                        <div className="space-y-2">
-                                            {employees.map(emp => (
-                                                <div key={emp.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 group">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold">{emp.name}</span>
-                                                        <span className="text-[10px] text-slate-400 uppercase font-bold">{depts.find(d => d.id === emp.department)?.name || 'Unbekannt'}</span>
-                                                    </div>
-                                                    <button onClick={() => deleteItem('employees', emp.id)} className="text-slate-300 hover:text-red-500 transition-all">
-                                                        <LucideIcon name="Trash" size={18}/>
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </section>
-                                </div>
-                            )}
-                        </div>
-                    </main>
+  return (
+    <div className="flex-1 overflow-y-auto p-12 bg-[#F3F4F6]">
+      <div className="max-w-5xl mx-auto space-y-12">
+        <h2 className="text-2xl font-bold text-slate-800 mb-8">System-Verwaltung</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <section className="bg-white p-6 rounded-2xl shadow-sm space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2 text-indigo-600"><Settings size={20}/> Abteilungen</h3>
+            <form onSubmit={addDepartment} className="flex gap-2">
+              <input value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="Name..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button type="submit" className="bg-indigo-600 text-white px-4 rounded-xl hover:bg-indigo-700 font-bold">Add</button>
+            </form>
+            <div className="space-y-2">
+              {departments.map(d => (
+                <div key={d.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="font-semibold text-slate-700">{d.name}</span>
+                  <button onClick={() => deleteDepartment(d.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
                 </div>
-            );
-        };
+              ))}
+            </div>
+          </section>
+          <section className="bg-white p-6 rounded-2xl shadow-sm space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2 text-emerald-600"><Users size={20}/> Mitarbeiter</h3>
+            <form onSubmit={addEmployee} className="space-y-2">
+              <input value={newEmpName} onChange={(e) => setNewEmpName(e.target.value)} placeholder="Vollständiger Name..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500" />
+              <div className="flex gap-2">
+                <select value={newEmpDept} onChange={(e) => setNewEmpDept(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="">Abteilung...</option>
+                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+                <button type="submit" className="bg-emerald-600 text-white px-6 rounded-xl hover:bg-emerald-700 font-bold">Hinzufügen</button>
+              </div>
+            </form>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+              {employees.map(e => (
+                <div key={e.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div>
+                    <div className="font-semibold text-slate-700">{e.name}</div>
+                    <div className="text-[10px] uppercase font-bold text-slate-400">
+                      {departments.find(d => d.id === e.department)?.name || e.department}
+                    </div>
+                  </div>
+                  <button onClick={() => deleteEmployee(e.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+// --- HAUPTKOMPONENTE ---
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('dashboard'); 
+  const [selectedDept, setSelectedDept] = useState('');
+  const [currentWeek, setCurrentWeek] = useState(getWeekNumber(CURRENT_DATE)[1]);
+  const [currentYear, setCurrentYear] = useState(2026);
+  const [archiveYear, setArchiveYear] = useState(2025);
+  
+  const [departments, setDepartments] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [hoursData, setHoursData] = useState([]);
+  const [holidays, setHolidays] = useState({});
+  const [showPdfMenu, setShowPdfMenu] = useState(false);
+
+  // PDF Libs laden
+  useEffect(() => {
+    const loadPdfLibs = async () => {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js');
+    };
+    loadPdfLibs();
+  }, []);
+
+  // Auth (FIX: Handle auth/custom-token-mismatch and other errors)
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          try {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } catch (tokenError) {
+            // Falls der Token ungültig ist oder nicht übereinstimmt, fallback auf anonym
+            await signInAnonymously(auth);
+          }
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) { 
+        console.error("Auth initialization failed:", e); 
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  // Sync: Abteilungen
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), (snap) => {
+      let depts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const sorted = depts.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      setDepartments(sorted);
+      if (sorted.length > 0 && !selectedDept) setSelectedDept(sorted[0].id);
+    }, (err) => console.error("Firestore Error Departments:", err));
+    return () => unsub();
+  }, [user, selectedDept]);
+
+  // Sync: Mitarbeiter
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), where('active', '==', true));
+    const unsub = onSnapshot(q, (snap) => {
+      setEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => console.error("Firestore Error Employees:", err));
+    return () => unsub();
+  }, [user]);
+
+  // Sync: Stunden & Feiertage
+  useEffect(() => {
+    if (!user) return;
+    const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'hours'), where('year', '==', effectiveYear));
+    
+    const unsubHours = onSnapshot(q, (snap) => {
+      setHoursData(snap.docs.map(doc => doc.data()));
+    }, (err) => console.error("Firestore Error Hours:", err));
+
+    const holidayDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'metadata', `holidays_${effectiveYear}_${currentWeek}`);
+    const unsubHolidays = onSnapshot(holidayDocRef, (snap) => {
+      if (snap.exists()) setHolidays(snap.data().days || {});
+      else setHolidays({});
+    }, (err) => console.error("Firestore Error Holidays:", err));
+
+    return () => { unsubHours(); unsubHolidays(); };
+  }, [user, currentYear, archiveYear, activeTab, currentWeek]);
+
+  const filteredEmployees = useMemo(() => 
+    employees.filter(e => e.department === selectedDept),
+  [employees, selectedDept]);
+
+  const stats = useMemo(() => {
+    const res = {};
+    const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
+    filteredEmployees.forEach(emp => {
+      const empHours = hoursData.filter(h => h.employeeId === emp.id);
+      let weekTotal = 0, yearTotal = 0;
+      const days = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+      empHours.forEach(h => {
+        if (h.year === effectiveYear) {
+          yearTotal += h.hours;
+          if (h.week === currentWeek) {
+            weekTotal += h.hours;
+            days[h.weekday] = h.hours;
+          }
+        }
+      });
+      res[emp.id] = { weekTotal, yearTotal, days };
+    });
+    return res;
+  }, [filteredEmployees, hoursData, currentWeek, currentYear, archiveYear, activeTab]);
+
+  const updateHours = async (empId, day, value) => {
+    if (!user || activeTab === 'archive') return;
+    const numValue = parseFloat(value.replace(',', '.')) || 0;
+    const docId = `h_${currentYear}_${currentWeek}_${empId}_${day}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId), {
+      employeeId: empId,
+      department: selectedDept,
+      year: currentYear,
+      week: currentWeek,
+      weekday: day,
+      hours: numValue,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  };
+
+  const toggleHoliday = async (day) => {
+    if (!user || activeTab === 'archive') return;
+    const newHolidays = { ...holidays, [day]: !holidays[day] };
+    const docId = `holidays_${currentYear}_${currentWeek}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'metadata', docId), {
+      year: currentYear,
+      week: currentWeek,
+      days: newHolidays
+    }, { merge: true });
+  };
+
+  const handleExportPdf = (type) => {
+    try {
+      if (!window.jspdf) return;
+      const { jsPDF } = window.jspdf;
+      const docInstance = new jsPDF();
+      
+      if (typeof docInstance.autoTable !== 'function') {
+        console.error("autoTable plugin not loaded correctly.");
+        return;
+      }
+
+      const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
+      let title = `Zeiterfassung KW${currentWeek} - ${effectiveYear}`;
+      
+      docInstance.setFontSize(18); 
+      docInstance.text(title, 14, 20);
+      
+      let currentY = 40;
+      
+      departments.forEach(dept => {
+        const deptEmps = employees.filter(e => e.department === dept.id);
+        if (deptEmps.length === 0) return;
+        
+        docInstance.setFontSize(14); 
+        docInstance.setTextColor(79, 70, 229);
+        docInstance.text(dept.name, 14, currentY); 
+        currentY += 5;
+        
+        const body = deptEmps.map(emp => {
+          const s = stats[emp.id] || { weekTotal: 0, yearTotal: 0 };
+          const val = type === 'week' ? s.weekTotal : s.yearTotal;
+          return [emp.name, `${val.toFixed(1).replace('.', ',')} h`];
+        });
+        
+        docInstance.autoTable({ 
+          startY: currentY, 
+          head: [['Mitarbeiter', 'Stunden']], 
+          body, 
+          theme: 'striped', 
+          margin: { left: 14 } 
+        });
+        
+        currentY = docInstance.lastAutoTable.finalY + 15;
+      });
+      
+      docInstance.save(`${title}.pdf`); 
+      setShowPdfMenu(false);
+    } catch (err) {
+      console.error("PDF Export Error:", err);
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-[#F3F4F6] text-slate-900 font-sans overflow-hidden">
+      <aside className="w-64 bg-[#1E1E2D] text-white flex flex-col z-10 shadow-2xl">
+        <div className="p-6 flex items-center gap-3">
+          <div className="bg-[#5C5CFF] w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">PE</div>
+          <h1 className="text-sm font-bold tracking-wider uppercase">Management</h1>
+        </div>
+        
+        <nav className="flex-1 px-4 space-y-2">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-[#4B4BFF] text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            <LayoutDashboard size={18} />
+            <span className="text-sm">Dashboard</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('archive')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'archive' ? 'bg-[#4B4BFF] text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            <Archive size={18} />
+            <span className="text-sm">Archiv</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('admin')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-[#4B4BFF] text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            <Settings size={18} />
+            <span className="text-sm">Verwaltung</span>
+          </button>
+
+          <div className="pt-8 px-4">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Bereiche</div>
+            <div className="space-y-1">
+              {departments.map(dept => (
+                <button
+                  key={dept.id}
+                  onClick={() => { setSelectedDept(dept.id); if(activeTab !== 'archive') setActiveTab('dashboard'); }}
+                  className={`w-full text-left px-4 py-2 text-xs rounded-lg transition-colors ${selectedDept === dept.id && activeTab === 'dashboard' ? 'text-white font-bold' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  {dept.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {activeTab === 'admin' ? (
+          <AdminManagement departments={departments} employees={employees} appId={appId} db={db} user={user} />
+        ) : (
+          <>
+            <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
+              <div className="flex items-center gap-4">
+                <span className="text-lg font-bold text-slate-700">
+                  {activeTab === 'archive' ? 'Archiv-Daten' : 'Zeiterfassung'}
+                </span>
+                
+                {activeTab === 'archive' ? (
+                  <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+                    <button onClick={() => setArchiveYear(y => y-1)} className="p-1 hover:bg-white rounded-lg"><ChevronLeft size={16}/></button>
+                    <span className="text-xs font-bold px-3">{archiveYear}</span>
+                    <button onClick={() => setArchiveYear(y => y+1)} className="p-1 hover:bg-white rounded-lg"><ChevronRight size={16}/></button>
+                  </div>
+                ) : null}
+
+                <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                  <button onClick={() => setCurrentWeek(w => Math.max(1, w-1))} className="p-1 hover:bg-white rounded"><ChevronLeft size={16}/></button>
+                  <span className="text-xs font-bold px-3 text-slate-600">KW {currentWeek}</span>
+                  <button onClick={() => setCurrentWeek(w => Math.min(52, w+1))} className="p-1 hover:bg-white rounded"><ChevronRight size={16}/></button>
+                  {activeTab !== 'archive' && (
+                    <button onClick={() => { setCurrentWeek(getWeekNumber(CURRENT_DATE)[1]); setCurrentYear(2026); }} className="p-1 hover:bg-white rounded text-indigo-500 ml-1"><X size={14}/></button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <button onClick={() => setShowPdfMenu(!showPdfMenu)} className="flex items-center gap-2 bg-[#5C5CFF] text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#4B4BFF] transition-all">
+                    <Download size={14} /> PDF Export
+                  </button>
+                  {showPdfMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1">
+                      <button onClick={() => handleExportPdf('week')} className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 font-bold text-slate-600">Wochenbericht</button>
+                      <button onClick={() => handleExportPdf('year')} className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 font-bold text-slate-600">Jahresbericht</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-8 space-y-6">
+              {activeTab === 'archive' && (
+                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center gap-3 text-amber-700 mb-2">
+                  <History size={18} />
+                  <span className="text-xs font-bold uppercase tracking-wide">Archiv-Modus: Daten sind nur lesbar.</span>
+                </div>
+              )}
+
+              <div className={`bg-white/60 border border-slate-200 rounded-2xl p-6 flex items-center justify-between shadow-sm ${activeTab === 'archive' ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Feiertage KW {currentWeek}:</span>
+                </div>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7].map(day => (
+                    <div key={day} className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-slate-400 font-bold">{['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day-1]}</span>
+                      <button 
+                        onClick={() => toggleHoliday(day)}
+                        disabled={activeTab === 'archive'}
+                        className={`w-10 h-10 rounded-xl border-2 transition-all flex items-center justify-center ${holidays[day] ? 'bg-red-50 border-red-200 text-red-500' : 'bg-slate-50 border-slate-100 text-slate-300 hover:border-slate-200'}`}
+                      >
+                        {holidays[day] ? <Calendar size={16}/> : <div className="w-1.5 h-1.5 rounded-full bg-slate-200"/>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="max-w-6xl mx-auto space-y-3">
+                {filteredEmployees.map(emp => {
+                  const s = stats[emp.id] || { weekTotal: 0, yearTotal: 0, days: {} };
+                  
+                  return (
+                    <div key={emp.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-6 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-slate-700 truncate">{emp.name}</h3>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Mitarbeiter</p>
+                      </div>
+
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                          <div key={day} className="relative group">
+                            <input 
+                              type="text"
+                              inputMode="decimal"
+                              readOnly={activeTab === 'archive'}
+                              value={s.days[day] === 0 ? '' : s.days[day]}
+                              onChange={(e) => updateHours(emp.id, day, e.target.value)}
+                              className={`w-10 h-10 border-2 rounded-xl text-center font-bold text-xs outline-none transition-all ${holidays[day] ? 'bg-red-50/30 border-red-100 text-red-400' : 'bg-slate-50 border-slate-100 focus:bg-white focus:border-indigo-400 text-slate-600'} ${activeTab === 'archive' ? 'cursor-default' : ''}`}
+                              placeholder="–"
+                            />
+                            {holidays[day] && <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-400 rounded-full border border-white"></div>}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="w-24 text-right bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                        <div className="text-sm font-bold text-slate-800 tabular-nums">
+                          {s.weekTotal.toFixed(1).replace('.', ',')}
+                        </div>
+                        <div className="text-[9px] font-bold text-indigo-500 uppercase tracking-tighter">Woche h</div>
+                      </div>
+
+                      <div className="w-24 text-right bg-indigo-50 px-3 py-2 rounded-xl border border-indigo-100">
+                        <div className="text-sm font-bold text-indigo-700 tabular-nums">
+                          {s.yearTotal.toFixed(1).replace('.', ',')}
+                        </div>
+                        <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter">Jahr h</div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredEmployees.length === 0 && (
+                  <div className="text-center py-20 bg-white/40 border-2 border-dashed border-slate-200 rounded-3xl">
+                    <Search size={32} className="mx-auto text-slate-200 mb-2" />
+                    <p className="text-slate-400 text-xs font-bold">Wähle einen Bereich in der Sidebar.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

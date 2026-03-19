@@ -54,8 +54,7 @@
             </div>
 
             <div class="max-w-7xl mx-auto" id="content-area">
-                <!-- Initialer Ladezustand -->
-                <div class="flex flex-col items-center justify-center h-64 gap-4">
+                <div id="loading-screen" class="flex flex-col items-center justify-center h-64 gap-4">
                     <i data-lucide="loader-2" class="w-10 h-10 text-blue-500 animate-spin"></i>
                     <p class="text-sm font-bold text-slate-400 animate-pulse">Initialisiere Cloud-Synchronisierung...</p>
                 </div>
@@ -67,14 +66,14 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, addDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Setup
+        // Globaler State
         const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = window.__app_id || 'stundendani-main';
+        const appId = window.__app_id || 'pro-exact-2026';
 
         let state = {
             user: null,
@@ -82,27 +81,20 @@
             departments: [],
             employees: [],
             hours: {},
-            holidays: {},
             currentWeek: getWeekNumber(new Date()),
             currentYear: new Date().getFullYear(),
             selectedDept: 'all',
-            isLoading: true
+            initialized: false
         };
 
-        // --- Core Functions ---
         function getWeekNumber(d) {
             d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
             return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
         }
 
-        window.switchTab = (tab) => {
-            state.activeTab = tab;
-            updateUI();
-        };
-
-        // --- Firebase Auth & Sync ---
-        async function init() {
+        // --- Firebase Core Logik ---
+        async function startApp() {
             try {
                 // Regel 3: Auth VOR Firestore
                 if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
@@ -110,66 +102,41 @@
                 } else {
                     await signInAnonymously(auth);
                 }
-                
+
                 onAuthStateChanged(auth, (user) => {
                     state.user = user;
                     if (user) {
-                        document.getElementById('user-display').innerText = `ID: ${user.uid}`;
-                        setupListeners();
-                    } else {
-                        document.getElementById('user-display').innerText = `Nicht angemeldet`;
-                        state.isLoading = false;
-                        updateUI();
+                        document.getElementById('user-display').innerText = `USER: ${user.uid}`;
+                        syncData();
                     }
                 });
             } catch (err) {
-                console.error("Auth Error:", err);
-                state.isLoading = false;
-                document.getElementById('content-area').innerHTML = `
-                    <div class="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-200">
-                        <h3 class="font-bold uppercase mb-2">Verbindungsfehler</h3>
-                        <p class="text-sm">${err.message || 'Die Cloud-Verbindung konnte nicht hergestellt werden.'}</p>
-                    </div>
-                `;
+                showError("Authentifizierungsfehler: " + err.message);
             }
         }
 
-        function setupListeners() {
+        function syncData() {
             if (!state.user) return;
 
-            const deptsRef = collection(db, 'artifacts', appId, 'public', 'data', 'departments');
-            const empsRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
-            const hoursRef = collection(db, 'artifacts', appId, 'public', 'data', 'hours');
+            // Regel 1: STRIKTE PFADE
+            const deptsPath = ['artifacts', appId, 'public', 'data', 'departments'];
+            const empsPath = ['artifacts', appId, 'public', 'data', 'employees'];
+            const hoursPath = ['artifacts', appId, 'public', 'data', 'hours'];
 
-            // Erste Datenladung markiert Ende von isLoading
-            let loadedCount = 0;
-            const checkInitialLoad = () => {
-                loadedCount++;
-                if (loadedCount >= 2) { // Deperatments und Employees sind kritisch
-                    state.isLoading = false;
-                    updateUI();
-                }
-            };
-
-            onSnapshot(deptsRef, (snap) => {
+            // Listener für Abteilungen
+            onSnapshot(collection(db, ...deptsPath), (snap) => {
                 state.departments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                checkInitialLoad();
-            }, (err) => {
-                console.error("Snapshot Error Depts:", err);
-                state.isLoading = false;
-                updateUI();
-            });
+                checkAndRender();
+            }, (err) => showError("Fehler beim Laden der Abteilungen: " + err.message));
 
-            onSnapshot(empsRef, (snap) => {
+            // Listener für Mitarbeiter
+            onSnapshot(collection(db, ...empsPath), (snap) => {
                 state.employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                checkInitialLoad();
-            }, (err) => {
-                console.error("Snapshot Error Emps:", err);
-                state.isLoading = false;
-                updateUI();
-            });
+                checkAndRender();
+            }, (err) => showError("Fehler beim Laden des Personals: " + err.message));
 
-            onSnapshot(hoursRef, (snap) => {
+            // Listener für Stunden
+            onSnapshot(collection(db, ...hoursPath), (snap) => {
                 state.hours = {};
                 snap.docs.forEach(d => {
                     const data = d.data();
@@ -177,18 +144,41 @@
                         state.hours[`${data.employeeId}_${data.weekday}`] = data.hours;
                     }
                 });
-                updateUI();
-            }, (err) => console.error("Snapshot Error Hours:", err));
+                checkAndRender();
+            }, (err) => console.error("Hours sync error:", err));
         }
+
+        function checkAndRender() {
+            state.initialized = true;
+            updateUI();
+        }
+
+        function showError(msg) {
+            const container = document.getElementById('content-area');
+            container.innerHTML = `
+                <div class="bg-red-50 border border-red-200 p-8 rounded-[2rem] text-red-700">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i data-lucide="alert-circle"></i>
+                        <h2 class="font-black italic uppercase">System-Fehler</h2>
+                    </div>
+                    <p class="text-sm font-bold">${msg}</p>
+                    <button onclick="location.reload()" class="mt-6 bg-red-600 text-white px-6 py-2 rounded-full font-bold text-xs uppercase italic tracking-widest">Neu laden</button>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        window.switchTab = (tab) => {
+            state.activeTab = tab;
+            updateUI();
+        };
 
         // --- UI Rendering ---
         function updateUI() {
             const container = document.getElementById('content-area');
-            if (!container) return;
-            
-            if (state.isLoading) return; // Behalte Lade-Spinner bei
+            if (!state.initialized) return;
 
-            // Sidebar Update
+            // Nav Buttons Style
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'shadow-lg', 'text-white');
                 btn.classList.add('text-slate-400');
@@ -199,20 +189,16 @@
                 activeBtn.classList.remove('text-slate-400');
             }
 
-            if (state.activeTab === 'dashboard') {
-                renderDashboard(container);
-            } else if (state.activeTab === 'admin') {
-                renderAdmin(container);
-            } else if (state.activeTab === 'archive') {
-                renderArchive(container);
-            }
-            
+            if (state.activeTab === 'dashboard') renderDashboard(container);
+            else if (state.activeTab === 'admin') renderAdmin(container);
+            else if (state.activeTab === 'archive') renderArchive(container);
+
             lucide.createIcons();
         }
 
         function renderDashboard(el) {
             const weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-            const filteredEmps = state.employees.filter(e => state.selectedDept === 'all' || e.department === state.selectedDept);
+            const filtered = state.employees.filter(e => state.selectedDept === 'all' || e.department === state.selectedDept);
 
             el.innerHTML = `
                 <div class="space-y-6">
@@ -241,8 +227,8 @@
                                     ${weekdays.map(d => `<th class="p-2 text-[10px] font-black uppercase text-slate-500 text-center">${d.substring(0,2)}</th>`).join('')}
                                     <th class="p-6 text-[10px] font-black uppercase text-blue-600 text-right tracking-widest">Summe</th>
                                 </tr>
-                                ${filteredEmps.length === 0 ? `<tr><td colspan="9" class="p-10 text-center text-slate-400 font-bold italic">Kein Personal in dieser Auswahl gefunden.</td></tr>` : 
-                                filteredEmps.map(emp => {
+                                ${filtered.length === 0 ? `<tr><td colspan="9" class="p-10 text-center text-slate-400 font-bold italic">Keine Daten vorhanden. Legen Sie Abteilungen und Personal in der Verwaltung an.</td></tr>` : 
+                                filtered.map(emp => {
                                     let total = 0;
                                     weekdays.forEach(d => total += (state.hours[`${emp.id}_${d}`] || 0));
                                     return `
@@ -257,15 +243,11 @@
                                             <td class="p-2 text-center">
                                                 <input type="text" value="${state.hours[`${emp.id}_${d}`] || ''}" 
                                                     onchange="saveHours('${emp.id}', '${d}', this.value)"
-                                                    placeholder="0"
-                                                    class="w-12 h-10 text-center font-black text-sm rounded-xl border-2 border-slate-100 bg-slate-50 focus:border-blue-400 outline-none transition-all">
+                                                    class="w-12 h-10 text-center font-black text-sm rounded-xl border-2 border-slate-100 bg-slate-50 focus:border-blue-400 outline-none">
                                             </td>
                                         `).join('')}
-                                        <td class="p-6 text-right">
-                                            <span class="px-3 py-1 bg-slate-900 text-white rounded-full font-black text-xs">${total.toFixed(2)}h</span>
-                                        </td>
-                                    </tr>
-                                    `;
+                                        <td class="p-6 text-right font-black text-xs">${total.toFixed(2)}h</td>
+                                    </tr>`;
                                 }).join('')}
                             </table>
                         </div>
@@ -276,42 +258,42 @@
 
         function renderAdmin(el) {
             el.innerHTML = `
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200">
-                        <h3 class="text-lg font-black italic text-slate-900 uppercase mb-6">Abteilungen</h3>
+                        <h3 class="text-lg font-black italic uppercase mb-6">Abteilungen</h3>
                         <div class="flex gap-2 mb-6">
-                            <input id="new-dept-input" class="flex-1 bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none" placeholder="Abteilungsname...">
-                            <button onclick="addDept()" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors"><i data-lucide="plus"></i></button>
+                            <input id="new-dept" class="flex-1 bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none" placeholder="Name...">
+                            <button onclick="addDept()" class="bg-blue-600 text-white p-3 rounded-full"><i data-lucide="plus"></i></button>
                         </div>
                         <div class="space-y-2">
                             ${state.departments.map(d => `
-                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
-                                    <span class="font-bold text-sm text-slate-700">${d.name}</span>
-                                    <button onclick="deleteDocItem('departments', '${d.id}')" class="text-slate-300 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                <div class="flex justify-between p-3 bg-slate-50 rounded-2xl">
+                                    <span class="font-bold text-sm">${d.name}</span>
+                                    <button onclick="delItem('departments', '${d.id}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
                     <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200">
-                        <h3 class="text-lg font-black italic text-slate-900 uppercase mb-6">Personal</h3>
-                        <div class="space-y-3 mb-6">
+                        <h3 class="text-lg font-black italic uppercase mb-6">Personal</h3>
+                        <div class="space-y-2 mb-6">
                             <input id="new-emp-name" class="w-full bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none" placeholder="Vollständiger Name...">
                             <div class="flex gap-2">
-                                <select id="new-emp-dept" class="flex-1 bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none appearance-none">
-                                    <option value="">Abteilung wählen...</option>
+                                <select id="new-emp-dept" class="flex-1 bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none">
+                                    <option value="">Abteilung...</option>
                                     ${state.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
                                 </select>
-                                <button onclick="addEmp()" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors"><i data-lucide="plus"></i></button>
+                                <button onclick="addEmp()" class="bg-blue-600 text-white p-3 rounded-full"><i data-lucide="plus"></i></button>
                             </div>
                         </div>
                         <div class="space-y-2">
                             ${state.employees.map(e => `
-                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                                <div class="flex justify-between p-3 bg-slate-50 rounded-2xl">
                                     <div>
-                                        <div class="font-bold text-sm text-slate-700">${e.name}</div>
-                                        <div class="text-[9px] font-black uppercase text-slate-400">${state.departments.find(d => d.id === e.department)?.name || 'Keine Abteilung'}</div>
+                                        <div class="font-bold text-sm">${e.name}</div>
+                                        <div class="text-[9px] font-black uppercase text-slate-400">${state.departments.find(d => d.id === e.department)?.name || 'N/A'}</div>
                                     </div>
-                                    <button onclick="deleteDocItem('employees', '${e.id}')" class="text-slate-300 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    <button onclick="delItem('employees', '${e.id}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                 </div>
                             `).join('')}
                         </div>
@@ -321,24 +303,12 @@
         }
 
         function renderArchive(el) {
-            el.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    ${[2024, 2025, 2026].map(y => `
-                        <div class="bg-white p-8 rounded-[2rem] border border-slate-200 flex flex-col items-center text-center space-y-4 hover:shadow-lg transition-all">
-                            <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center"><i data-lucide="calendar" class="w-6 h-6 text-slate-400"></i></div>
-                            <h3 class="text-2xl font-black italic tracking-tighter text-slate-900">${y}</h3>
-                            <button class="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">
-                                <i data-lucide="download" class="w-4 h-4"></i> Export
-                            </button>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+            el.innerHTML = `<div class="p-10 text-center bg-white rounded-[2rem] border border-slate-200 font-bold italic text-slate-400">Archiv-Funktion wird vorbereitet...</div>`;
         }
 
-        // --- Action Handlers ---
-        window.changeWeek = (offset) => {
-            state.currentWeek += offset;
+        // --- Actions ---
+        window.changeWeek = (o) => {
+            state.currentWeek += o;
             if (state.currentWeek > 52) { state.currentWeek = 1; state.currentYear++; }
             if (state.currentWeek < 1) { state.currentWeek = 52; state.currentYear--; }
             updateUI();
@@ -353,37 +323,32 @@
             if (!state.user) return;
             const h = parseFloat(val.replace(',', '.')) || 0;
             const docId = `h_${state.currentYear}_${state.currentWeek}_${empId}_${day}`;
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId), {
-                    employeeId: empId, year: state.currentYear, week: state.currentWeek, weekday: day, hours: h
-                });
-            } catch (e) { console.error("Save Error:", e); }
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId), {
+                employeeId: empId, year: state.currentYear, week: state.currentWeek, weekday: day, hours: h
+            });
         };
 
         window.addDept = async () => {
-            const input = document.getElementById('new-dept-input');
-            const name = input.value.trim();
-            if (!name || !state.user) return;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), { name });
+            const input = document.getElementById('new-dept');
+            if (!input.value || !state.user) return;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), { name: input.value });
             input.value = '';
         };
 
         window.addEmp = async () => {
-            const nameInput = document.getElementById('new-emp-name');
-            const deptInput = document.getElementById('new-emp-dept');
-            const name = nameInput.value.trim();
-            const dept = deptInput.value;
-            if (!name || !dept || !state.user) return;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), { name, department: dept });
-            nameInput.value = '';
+            const name = document.getElementById('new-emp-name');
+            const dept = document.getElementById('new-emp-dept');
+            if (!name.value || !dept.value || !state.user) return;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), { name: name.value, department: dept.value });
+            name.value = '';
         };
 
-        window.deleteDocItem = async (col, id) => {
+        window.delItem = async (col, id) => {
             if (!state.user) return;
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
         };
 
-        init();
+        startApp();
     </script>
 </body>
 </html>

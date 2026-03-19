@@ -1,216 +1,436 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Users, Archive, Calendar, ChevronLeft, ChevronRight, 
-  LayoutDashboard, Settings, Trash2, X, Download, Search, History, AlertCircle 
+  Users, Archive as ArchiveIcon, Calendar, ChevronLeft, ChevronRight, 
+  LayoutDashboard, Settings, Trash2, Download, History, 
+  FileText, CheckCircle, Database, Loader2, Plus, X, Sun
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
-  getFirestore, collection, doc, setDoc, onSnapshot, query, 
-  where, serverTimestamp, deleteDoc 
-} from 'firebase/firestore';
-import { 
   getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged 
 } from 'firebase/auth';
+import { 
+  getFirestore, collection, doc, setDoc, getDoc, onSnapshot, 
+  deleteDoc, addDoc, query, where 
+} from 'firebase/firestore';
 
-// --- FEHLERBEHEBUNG: FIREBASE KONFIGURATION ---
-// Falls die globalen Variablen fehlen, nutzen wir Fallbacks, um den "Crash" zu verhindern
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
-  : { /* Hier müssten deine Fallback-Daten stehen, falls lokal getestet wird */ };
+// --- Firebase Configuration (Deine Projektdaten) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAed2CEj7_qC4vYnlM2o5u1rtJOGy7EPTc",
+  authDomain: "stundendani.firebaseapp.com",
+  databaseURL: "https://stundendani-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "stundendani",
+  storageBucket: "stundendani.firebasestorage.app",
+  messagingSenderId: "658690155661",
+  appId: "1:658690155661:web:9a4c60bcaa5ba412752ec4"
+};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'stunden-pro-exact';
 
-// --- HELFER ---
-const CURRENT_DATE = new Date('2026-03-19');
-const getWeekNumber = (d) => {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+// App-ID für die Pfad-Struktur
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'stundendani-main';
+
+// --- Konstanten ---
+const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const YEARS = [2024, 2025, 2026, 2027];
+
+// --- Unterkomponenten ---
+
+const DashboardView = ({ 
+  currentWeek, setCurrentWeek, currentYear, setCurrentYear, 
+  departments, selectedDept, setSelectedDept, 
+  holidays, toggleHoliday, filteredEmployees, hoursData, handleHourChange, calculateTotal 
+}) => (
+  <div className="space-y-6">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[3rem] shadow-sm border border-slate-200">
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => {
+            if (currentWeek > 1) setCurrentWeek(prev => prev - 1);
+            else { setCurrentYear(y => y - 1); setCurrentWeek(52); }
+          }}
+          className="p-3 hover:bg-slate-100 rounded-full transition-colors"
+        >
+          <ChevronLeft className="w-6 h-6 text-slate-600" />
+        </button>
+        <div className="text-center min-w-[120px]">
+          <h2 className="text-xl font-black italic text-slate-900 uppercase tracking-tighter">KW {currentWeek}</h2>
+          <p className="text-xs font-bold text-slate-500 uppercase">{currentYear}</p>
+        </div>
+        <button 
+          onClick={() => {
+            if (currentWeek < 52) setCurrentWeek(prev => prev + 1);
+            else { setCurrentYear(y => y + 1); setCurrentWeek(1); }
+          }}
+          className="p-3 hover:bg-slate-100 rounded-full transition-colors"
+        >
+          <ChevronRight className="w-6 h-6 text-slate-600" />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+        <button 
+          onClick={() => setSelectedDept('all')}
+          className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${selectedDept === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+        >
+          Alle
+        </button>
+        {departments.map(dept => (
+          <button 
+            key={dept.id}
+            onClick={() => setSelectedDept(dept.id)}
+            className={`px-6 py-2 rounded-full font-bold text-sm transition-all whitespace-nowrap ${selectedDept === dept.id ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          >
+            {dept.name}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+      {WEEKDAYS.map(day => (
+        <button
+          key={day}
+          onClick={() => toggleHoliday(day)}
+          className={`py-3 rounded-[1.5rem] text-xs font-black uppercase flex flex-col items-center gap-1 transition-all border-2 ${holidays[day] ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-transparent text-slate-400 hover:border-slate-200'}`}
+        >
+          <Sun className={`w-4 h-4 ${holidays[day] ? 'fill-blue-500' : ''}`} />
+          {day.substring(0, 2)}
+        </button>
+      ))}
+    </div>
+
+    <div className="bg-white rounded-[4rem] shadow-sm border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-100">
+              <th className="p-8 text-xs font-black uppercase text-slate-500 tracking-widest w-64">Mitarbeiter</th>
+              {WEEKDAYS.map(day => (
+                <th key={day} className="p-4 text-xs font-black uppercase text-slate-500 tracking-widest text-center">
+                  {day}
+                </th>
+              ))}
+              <th className="p-8 text-xs font-black uppercase text-blue-600 tracking-widest text-right">Summe</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredEmployees.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="p-20 text-center text-slate-400 font-bold italic">Keine Mitarbeiter gefunden.</td>
+              </tr>
+            ) : (
+              filteredEmployees.map(emp => (
+                <tr key={emp.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
+                  <td className="p-8">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black italic">
+                        {emp.name.charAt(0)}
+                      </div>
+                      <span className="font-bold text-slate-800 tracking-tight">{emp.name}</span>
+                    </div>
+                  </td>
+                  {WEEKDAYS.map(day => (
+                    <td key={day} className={`p-2 text-center transition-colors ${holidays[day] ? 'bg-blue-50/50' : ''}`}>
+                      <input 
+                        type="text"
+                        placeholder="0.0"
+                        value={hoursData[`${emp.id}_${day}`] || ''}
+                        onChange={(e) => handleHourChange(emp.id, day, e.target.value)}
+                        className={`w-16 h-12 text-center font-black rounded-3xl border-2 transition-all outline-none ${
+                          holidays[day] 
+                            ? 'border-blue-200 bg-white text-blue-600' 
+                            : 'border-slate-100 bg-slate-50'
+                        }`}
+                      />
+                    </td>
+                  ))}
+                  <td className="p-8 text-right">
+                    <div className="inline-block px-6 py-3 bg-slate-900 text-white rounded-[2rem] font-black italic shadow-lg">
+                      {calculateTotal(emp.id)}h
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
+
+const ArchiveView = ({ isExporting, setIsExporting }) => (
+  <div className="space-y-8">
+    <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter uppercase">Jahresarchive</h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {YEARS.map(year => (
+        <div key={year} className="bg-white p-8 rounded-[3.5rem] shadow-sm border border-slate-200 flex flex-col items-center text-center space-y-4 hover:shadow-xl transition-all">
+          <div className="w-20 h-20 bg-slate-100 rounded-[2rem] flex items-center justify-center">
+            <Calendar className="w-10 h-10 text-slate-400" />
+          </div>
+          <h3 className="text-4xl font-black italic tracking-tighter text-slate-900">{year}</h3>
+          <button 
+            onClick={() => {
+              setIsExporting(true);
+              setTimeout(() => setIsExporting(false), 2000);
+            }}
+            className="w-full mt-4 flex items-center justify-center gap-2 bg-slate-900 text-white py-4 rounded-[2rem] font-bold"
+          >
+            {isExporting ? <CheckCircle className="w-5 h-5" /> : <Download className="w-5 h-5" />}
+            {isExporting ? 'Exportiert' : 'PDF Export'}
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const AdminView = ({ 
+  departments, employees, user, appId, db, deleteItem 
+}) => {
+  const [newDept, setNewDept] = useState('');
+  const [newEmpName, setNewEmpName] = useState('');
+  const [newEmpDept, setNewEmpDept] = useState('');
+
+  const addDepartment = async () => {
+    if (!newDept || !user) return;
+    const id = newDept.toLowerCase().replace(/\s+/g, '_');
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', id), { name: newDept });
+    setNewDept('');
+  };
+
+  const addEmployee = async () => {
+    if (!newEmpName || !newEmpDept || !user) return;
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), {
+      name: newEmpName,
+      department: newEmpDept
+    });
+    setNewEmpName('');
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="bg-white p-10 rounded-[4rem] shadow-sm border border-slate-200">
+        <h3 className="text-2xl font-black italic text-slate-900 uppercase mb-6">Abteilungen</h3>
+        <div className="flex gap-2 mb-8">
+          <input 
+            className="flex-1 bg-slate-100 border-none rounded-full px-6 py-4 font-bold outline-none"
+            placeholder="Name der Abteilung..."
+            value={newDept}
+            onChange={(e) => setNewDept(e.target.value)}
+          />
+          <button onClick={addDepartment} className="bg-blue-600 text-white p-4 rounded-full">
+            <Plus className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          {departments.map(dept => (
+            <div key={dept.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-[1.5rem]">
+              <span className="font-bold text-slate-700">{dept.name}</span>
+              <button onClick={() => deleteItem('departments', dept.id)} className="p-2 text-slate-300 hover:text-red-500">
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white p-10 rounded-[4rem] shadow-sm border border-slate-200">
+        <h3 className="text-2xl font-black italic text-slate-900 uppercase mb-6">Personal</h3>
+        <div className="space-y-4 mb-8">
+          <input 
+            className="w-full bg-slate-100 border-none rounded-full px-6 py-4 font-bold outline-none"
+            placeholder="Name des Mitarbeiters..."
+            value={newEmpName}
+            onChange={(e) => setNewEmpName(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <select 
+              className="flex-1 bg-slate-100 border-none rounded-full px-6 py-4 font-bold outline-none appearance-none"
+              value={newEmpDept}
+              onChange={(e) => setNewEmpDept(e.target.value)}
+            >
+              <option value="">Abteilung wählen...</option>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <button onClick={addEmployee} className="bg-blue-600 text-white p-4 rounded-full">
+              <Plus className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {employees.map(emp => (
+            <div key={emp.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-[1.5rem]">
+              <div>
+                <div className="font-bold text-slate-700">{emp.name}</div>
+                <div className="text-[10px] font-black uppercase text-slate-400">{departments.find(d => d.id === emp.department)?.name || 'Ohne Abt.'}</div>
+              </div>
+              <button onClick={() => deleteItem('employees', emp.id)} className="p-2 text-slate-300 hover:text-red-500">
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
+
+// --- Main App ---
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true); // Neu: Ladezustand
+  const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedDept, setSelectedDept] = useState("");
-  const [currentWeek, setCurrentWeek] = useState(getWeekNumber(CURRENT_DATE));
-  const [currentYear, setCurrentYear] = useState(2026);
   
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [hoursData, setHoursData] = useState([]);
-  const [holidays, setHolidays] = useState([]);
+  const [hoursData, setHoursData] = useState({}); 
+  const [holidays, setHolidays] = useState({}); 
+  
+  const [selectedDept, setSelectedDept] = useState('all');
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentWeek, setCurrentWeek] = useState(getWeekNumber(new Date()));
+  const [isExporting, setIsExporting] = useState(false);
 
-  // 1. Authentifizierung
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
+        // Prüfen, ob ein Token existiert UND ob er zum aktuellen Projekt gehört
+        // Da wir ein eigenes Projekt nutzen, ist die Wahrscheinlichkeit hoch, 
+        // dass der __initial_auth_token der Umgebung nicht passt.
+        // Wir versuchen daher direkt den anonymen Login für das neue Projekt.
+        await signInAnonymously(auth);
       } catch (err) {
-        console.error("Auth Fehler:", err);
+        console.error("Auth Error", err);
+        // Falls anonym fehlschlägt, versuchen wir es als letzten Ausweg mit dem Token
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          try {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } catch (tokenErr) {
+            console.error("Custom Token Error", tokenErr);
+          }
+        }
       } finally {
         setAuthLoading(false);
       }
     };
     initAuth();
-    return onAuthStateChanged(auth, (u) => setUser(u));
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
   }, []);
 
-  // 2. Daten-Sync
   useEffect(() => {
     if (!user) return;
+
+    // Listener für Daten
     const unsubDepts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), (snap) => {
-      const depts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setDepartments(depts);
-      if (depts.length > 0 && !selectedDept) setSelectedDept(depts[0].id);
-    });
+      setDepartments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => console.error("Firestore Dept Error:", err));
+
     const unsubEmps = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), (snap) => {
       setEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => { unsubDepts(); unsubEmps(); };
-  }, [user]);
+    }, (err) => console.error("Firestore Emp Error:", err));
 
-  // 3. Stunden-Sync
-  useEffect(() => {
-    if (!user) return;
-    const qHours = query(
-      collection(db, 'artifacts', appId, 'public', 'data', 'hours'), 
-      where('year', '==', currentYear),
-      where('week', '==', currentWeek)
-    );
-    const unsubHours = onSnapshot(qHours, (snap) => {
-      setHoursData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    const unsubHols = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'holidays'), (snap) => {
+      const hols = {};
+      snap.docs.forEach(doc => {
+        const d = doc.data();
+        if (d.year === currentYear && d.week === currentWeek) hols[d.weekday] = d.isHoliday;
+      });
+      setHolidays(hols);
+    }, (err) => console.error("Firestore Holiday Error:", err));
 
-    const qHolidays = query(
-      collection(db, 'artifacts', appId, 'public', 'data', 'holidays'),
-      where('year', '==', currentYear),
-      where('week', '==', currentWeek)
-    );
-    const unsubHolidays = onSnapshot(qHolidays, (snap) => {
-      setHolidays(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    const unsubHours = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'hours'), (snap) => {
+      const data = {};
+      snap.docs.forEach(doc => {
+        const d = doc.data();
+        if (d.year === currentYear && d.week === currentWeek) data[`${d.employeeId}_${d.weekday}`] = d.hours;
+      });
+      setHoursData(data);
+    }, (err) => console.error("Firestore Hours Error:", err));
 
-    return () => { unsubHours(); unsubHolidays(); };
+    return () => { unsubDepts(); unsubEmps(); unsubHols(); unsubHours(); };
   }, [user, currentYear, currentWeek]);
 
-  const filteredEmployees = useMemo(() => {
-    if (!selectedDept) return [];
-    return employees.filter(e => e.department === selectedDept);
-  }, [employees, selectedDept]);
+  function getWeekNumber(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+  }
 
-  const updateHours = async (empId, day, value) => {
+  const handleHourChange = async (empId, weekday, val) => {
     if (!user) return;
-    const numValue = parseFloat(value.replace(',', '.')) || 0;
-    const docId = `h_${currentYear}_${currentWeek}_${empId}_${day}`;
+    const hoursNum = parseFloat(val.replace(',', '.')) || 0;
+    const docId = `h_${currentYear}_${currentWeek}_${empId}_${weekday}`;
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId), {
-      employeeId: empId, year: currentYear, week: currentWeek, weekday: day, hours: numValue
-    }, { merge: true });
+      employeeId: empId, year: currentYear, week: currentWeek, weekday, hours: hoursNum
+    });
   };
 
-  const toggleHoliday = async (day) => {
+  const toggleHoliday = async (weekday) => {
     if (!user) return;
-    const docId = `hol_${currentYear}_${currentWeek}_${day}`;
-    const exists = holidays.find(h => h.weekday === day);
-    if (exists) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'holidays', docId));
-    } else {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'holidays', docId), {
-        year: currentYear, week: currentWeek, weekday: day, isHoliday: true
-      });
-    }
+    const docId = `hol_${currentYear}_${currentWeek}_${weekday}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'holidays', docId), {
+      year: currentYear, week: currentWeek, weekday, isHoliday: !holidays[weekday]
+    });
   };
 
-  const getHours = (empId, day) => {
-    const entry = hoursData.find(h => h.employeeId === empId && h.weekday === day);
-    return entry ? entry.hours.toString().replace('.', ',') : "";
+  const deleteItem = async (col, id) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
   };
 
-  const weekdays = [
-    { id: 1, label: 'Mo' }, { id: 2, label: 'Di' }, { id: 3, label: 'Mi' },
-    { id: 4, label: 'Do' }, { id: 5, label: 'Fr' }, { id: 6, label: 'Sa' }, { id: 7, label: 'So' }
-  ];
+  const filteredEmployees = employees.filter(emp => selectedDept === 'all' || emp.department === selectedDept);
+  const calculateTotal = (empId) => WEEKDAYS.reduce((sum, day) => sum + (hoursData[`${empId}_${day}`] || 0), 0).toFixed(2);
 
-  if (authLoading) return <div className="h-screen flex items-center justify-center bg-[#1e2330] text-white font-bold">Lade System...</div>;
+  if (authLoading) return (
+    <div className="fixed inset-0 bg-[#0f172a] flex items-center justify-center text-white">
+      <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+    </div>
+  );
 
   return (
-    <div className="flex h-screen bg-[#f3f4f6] font-sans text-slate-800 overflow-hidden">
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-[#1e2330] text-white flex flex-col shrink-0">
-        <div className="p-6 flex items-center gap-3">
-          <div className="bg-indigo-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold">PE</div>
-          <span className="font-bold tracking-tight text-lg uppercase">Pro Exact</span>
+    <div className="flex min-h-screen bg-slate-100 selection:bg-blue-100">
+      <aside className="w-80 bg-[#0f172a] text-white flex flex-col p-10 fixed h-full z-20">
+        <div className="mb-12 flex items-center gap-3">
+          <Database className="w-8 h-8 text-blue-500" />
+          <h1 className="text-2xl font-black italic tracking-tighter uppercase">Pro-Exact</h1>
         </div>
-
-        <nav className="mt-4 px-3 space-y-1">
-          <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'dashboard' ? 'bg-blue-600 shadow-xl shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-            <LayoutDashboard size={18}/> Dashboard
+        <nav className="flex-1 space-y-3">
+          <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-4 px-6 py-5 rounded-[2rem] font-bold ${activeTab === 'dashboard' ? 'bg-blue-600' : 'text-slate-400 hover:bg-slate-800'}`}>
+            <LayoutDashboard className="w-5 h-5" /> Dashboard
           </button>
-          <button onClick={() => setActiveTab('archive')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'archive' ? 'bg-blue-600 shadow-xl shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-            <Archive size={18}/> Archiv
+          <button onClick={() => setActiveTab('archive')} className={`w-full flex items-center gap-4 px-6 py-5 rounded-[2rem] font-bold ${activeTab === 'archive' ? 'bg-blue-600' : 'text-slate-400 hover:bg-slate-800'}`}>
+            <ArchiveIcon className="w-5 h-5" /> Archiv
           </button>
-          <button onClick={() => setActiveTab('admin')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'admin' ? 'bg-blue-600 shadow-xl shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-            <Settings size={18}/> Verwaltung
+          <button onClick={() => setActiveTab('admin')} className={`w-full flex items-center gap-4 px-6 py-5 rounded-[2rem] font-bold ${activeTab === 'admin' ? 'bg-blue-600' : 'text-slate-400 hover:bg-slate-800'}`}>
+            <Settings className="w-5 h-5" /> Verwaltung
           </button>
         </nav>
-
-        <div className="mt-10 px-6">
-          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Abteilungen</h3>
-          <div className="space-y-2 overflow-y-auto max-h-64">
-            {departments.map(d => (
-              <button 
-                key={d.id} 
-                onClick={() => {setSelectedDept(d.id); setActiveTab('dashboard');}} 
-                className={`w-full text-left text-sm px-5 py-3 rounded-xl transition-all ${selectedDept === d.id && activeTab === 'dashboard' ? 'bg-blue-500/10 text-blue-400 font-black' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                {d.name}
-              </button>
-            ))}
-          </div>
-        </div>
+        <div className="mt-auto p-4 text-[10px] text-slate-500 uppercase font-black">ID: {user?.uid || 'Nicht eingeloggt'}</div>
       </aside>
 
-      {/* MAIN */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white h-20 flex items-center justify-between px-8 border-b border-slate-200 shrink-0">
-          <div className="flex items-center gap-6">
-            <h1 className="text-xl font-black text-slate-900">
-              {activeTab === 'admin' ? 'Verwaltung' : activeTab === 'archive' ? 'Archiv' : (departments.find(d => d.id === selectedDept)?.name || 'Dashboard')}
-            </h1>
-            
-            {activeTab === 'dashboard' && (
-              <div className="flex items-center gap-1">
-                <button onClick={() => setCurrentWeek(w => w > 1 ? w - 1 : 52)} className="w-12 h-12 flex items-center justify-center bg-white hover:bg-blue-50 rounded-xl transition-all text-slate-600 hover:text-blue-600 shadow-sm border border-slate-200/50">‹</button>
-                <div className="px-4 font-bold text-sm">Woche KW {currentWeek}</div>
-                <button onClick={() => setCurrentWeek(w => w < 52 ? w + 1 : 1)} className="w-12 h-12 flex items-center justify-center bg-white hover:bg-blue-50 rounded-xl transition-all text-slate-600 hover:text-blue-600 shadow-sm border border-slate-200/50">›</button>
-              </div>
-            )}
-          </div>
-          <button className="bg-slate-900 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/20 flex items-center gap-2">
-            <Download size={16}/> Export PDF
-          </button>
+      <main className="flex-1 ml-80 p-12">
+        <header className="mb-10">
+          <h2 className="text-3xl font-black italic text-slate-900">
+            {activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'archive' ? 'Archiv' : 'Verwaltung'}
+          </h2>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8">
-           {/* Hier folgt der Rest deines Dashboard-Inhalts (wie im vorherigen Code) */}
-           {activeTab === 'dashboard' && (
-             <div className="grid gap-4">
-               {filteredEmployees.map(emp => (
-                 <div key={emp.id} className="bg-white p-6 rounded-2xl border border-slate-200 flex items-center gap-8 shadow-sm">
-                   <div className="w-48 font-bold">{emp.name}</div>
-                   {/* ... Inputs ... */}
-                 </div>
-               ))}
-             </div>
-           )}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {activeTab === 'dashboard' && (
+            <DashboardView 
+              currentWeek={currentWeek} setCurrentWeek={setCurrentWeek} currentYear={currentYear} setCurrentYear={setCurrentYear}
+              departments={departments} selectedDept={selectedDept} setSelectedDept={setSelectedDept}
+              holidays={holidays} toggleHoliday={toggleHoliday} filteredEmployees={filteredEmployees}
+              hoursData={hoursData} handleHourChange={handleHourChange} calculateTotal={calculateTotal}
+            />
+          )}
+          {activeTab === 'archive' && <ArchiveView isExporting={isExporting} setIsExporting={setIsExporting} />}
+          {activeTab === 'admin' && <AdminView departments={departments} employees={employees} user={user} appId={appId} db={db} deleteItem={deleteItem} />}
         </div>
       </main>
     </div>

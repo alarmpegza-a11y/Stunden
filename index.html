@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Archive, Calendar, ChevronLeft, ChevronRight, 
   LayoutDashboard, Settings, Trash2, Download, History, 
-  AlertCircle, FileText, CheckCircle, Database
+  FileText, CheckCircle, Database, Loader2
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -30,6 +30,7 @@ const getWeekNumber = (d) => {
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [view, setView] = useState('dashboard'); // 'dashboard', 'archive', 'admin'
   const [selectedDeptId, setSelectedDeptId] = useState("");
   const [currentWeek, setCurrentWeek] = useState(getWeekNumber(CURRENT_DATE));
@@ -41,13 +42,19 @@ export default function App() {
   const [holidays, setHolidays] = useState([]);
   const [exportingYear, setExportingYear] = useState(null);
 
-  // 1. Authentication
+  // 1. Absolute Authentication Priority
   useEffect(() => {
     const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth error", err);
+      } finally {
+        setAuthLoading(false);
       }
     };
     initAuth();
@@ -55,24 +62,27 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Synchronization (Base Data)
+  // 2. Base Data Sync (Departments & Employees)
   useEffect(() => {
     if (!user) return;
     
     const unsubDepts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), (snap) => {
       const depts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setDepartments(depts);
-      if (depts.length > 0 && !selectedDeptId) setSelectedDeptId(depts[0].id);
-    });
+      // Auto-select first department if none selected
+      if (depts.length > 0 && !selectedDeptId) {
+        setSelectedDeptId(depts[0].id);
+      }
+    }, (err) => console.error(err));
 
     const unsubEmps = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), (snap) => {
       setEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    }, (err) => console.error(err));
 
     return () => { unsubDepts(); unsubEmps(); };
   }, [user]);
 
-  // 3. Dynamic Data (Hours & Holidays)
+  // 3. Dynamic Data (Hours & Holidays) - ONLY in Dashboard
   useEffect(() => {
     if (!user || view !== 'dashboard') return;
     
@@ -83,7 +93,7 @@ export default function App() {
     );
     const unsubHours = onSnapshot(qHours, (snap) => {
       setHoursData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    }, (err) => console.error(err));
 
     const qHolidays = query(
       collection(db, 'artifacts', appId, 'public', 'data', 'holidays'),
@@ -92,13 +102,14 @@ export default function App() {
     );
     const unsubHolidays = onSnapshot(qHolidays, (snap) => {
       setHolidays(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    }, (err) => console.error(err));
 
     return () => { unsubHours(); unsubHolidays(); };
   }, [user, currentYear, currentWeek, view]);
 
-  // Derived State
+  // Calculations
   const filteredEmployees = useMemo(() => {
+    if (!selectedDeptId) return [];
     return employees.filter(e => e.department === selectedDeptId);
   }, [employees, selectedDeptId]);
 
@@ -125,22 +136,26 @@ export default function App() {
     }
   };
 
-  const handleExport = (year) => {
-    setExportingYear(year);
-    setTimeout(() => setExportingYear(null), 2000);
-  };
-
   const weekdays = [
     { id: 1, label: 'Mo' }, { id: 2, label: 'Di' }, { id: 3, label: 'Mi' },
     { id: 4, label: 'Do' }, { id: 5, label: 'Fr' }, { id: 6, label: 'Sa' }, { id: 7, label: 'So' }
   ];
 
+  if (authLoading) {
+    return (
+      <div className="h-screen w-full bg-[#0f172a] flex flex-col items-center justify-center text-white">
+        <Loader2 className="animate-spin mb-6 text-blue-500" size={60} />
+        <h2 className="text-2xl font-black italic tracking-widest uppercase">Lade System...</h2>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-[#f1f5f9] font-sans text-slate-800 overflow-hidden">
       {/* SIDEBAR */}
-      <aside className="w-72 bg-[#0f172a] text-white flex flex-col shrink-0 shadow-2xl">
+      <aside className="w-72 bg-[#0f172a] text-white flex flex-col shrink-0 shadow-2xl z-20">
         <div className="p-10 flex items-center gap-4">
-          <div className="bg-blue-500 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg shadow-blue-500/20 italic">P</div>
+          <div className="bg-blue-600 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg shadow-blue-600/20 italic">P</div>
           <span className="font-black tracking-tight text-xl uppercase italic">Pro-Exact</span>
         </div>
 
@@ -185,18 +200,18 @@ export default function App() {
         <div className="p-8 border-t border-slate-800/50">
            <div className="flex items-center gap-3 bg-slate-800/40 p-4 rounded-2xl border border-slate-700/50">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">System Aktiv</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">System Online</span>
            </div>
         </div>
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* HEADER */}
         <header className="bg-white/90 backdrop-blur-xl h-24 flex items-center justify-between px-12 border-b border-slate-200 shrink-0 z-10">
           <div className="flex items-center gap-10">
             <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">
-              {view === 'admin' ? 'Verwaltung' : view === 'archive' ? 'Archiv' : (departments.find(d => d.id === selectedDeptId)?.name || 'Pro-Exact')}
+              {view === 'admin' ? 'Verwaltung' : view === 'archive' ? 'Archiv' : (departments.find(d => d.id === selectedDeptId)?.name || 'Dashboard')}
             </h1>
             
             {view === 'dashboard' && (
@@ -205,7 +220,7 @@ export default function App() {
                   <ChevronLeft size={20} strokeWidth={3}/>
                 </button>
                 <div className="px-6 flex flex-col items-center min-w-[100px]">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5">Kalenderwoche</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5">Woche</span>
                   <span className="font-black text-slate-900 text-lg leading-none">KW {currentWeek}</span>
                 </div>
                 <button onClick={() => setCurrentWeek(w => w < 52 ? w + 1 : 1)} className="w-12 h-12 flex items-center justify-center bg-white hover:bg-blue-50 rounded-xl transition-all text-slate-600 hover:text-blue-600 shadow-sm border border-slate-200/50">
@@ -222,19 +237,20 @@ export default function App() {
           </div>
         </header>
 
-        {/* CONTENT */}
+        {/* CONTENT AREA */}
         <div className="flex-1 overflow-y-auto p-12 bg-[#f8fafc]">
+          {/* DASHBOARD VIEW */}
           {view === 'dashboard' && (
             <div className="max-w-7xl mx-auto space-y-10">
-              {/* HOLIDAYS */}
+              {/* HOLIDAY CONFIG */}
               <div className="bg-white p-8 rounded-[3rem] border border-slate-200 flex flex-col lg:flex-row items-center justify-between shadow-sm gap-6">
                 <div className="flex items-center gap-5">
                    <div className="w-14 h-14 bg-blue-50 rounded-[1.5rem] flex items-center justify-center text-blue-600">
                       <Calendar size={28}/>
                    </div>
                    <div>
-                      <h4 className="font-black text-slate-900 text-lg italic uppercase tracking-tight">Wochen-Konfiguration</h4>
-                      <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Feiertage für KW {currentWeek} festlegen</p>
+                      <h4 className="font-black text-slate-900 text-lg italic uppercase tracking-tight">Wochen-Konfig</h4>
+                      <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Feiertage KW {currentWeek}</p>
                    </div>
                 </div>
                 <div className="flex gap-2.5 bg-slate-50 p-2 rounded-[2rem] border border-slate-100">
@@ -244,7 +260,7 @@ export default function App() {
                       <button 
                         key={day.id} 
                         onClick={() => toggleHoliday(day.id)}
-                        className={`w-14 h-14 rounded-2xl text-xs font-black transition-all flex items-center justify-center border-2 ${isHol ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-600/30 scale-110 z-10' : 'bg-white border-transparent text-slate-400 hover:border-slate-200'}`}
+                        className={`w-14 h-14 rounded-2xl text-xs font-black transition-all flex items-center justify-center border-2 ${isHol ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-600/30 scale-110' : 'bg-white border-transparent text-slate-400 hover:border-slate-200'}`}
                       >
                         {day.label}
                       </button>
@@ -253,31 +269,31 @@ export default function App() {
                 </div>
               </div>
 
-              {/* LIST */}
+              {/* EMPLOYEE CARDS */}
               <div className="grid gap-8">
                 {filteredEmployees.length === 0 ? (
                   <div className="text-center py-32 bg-white rounded-[4rem] border-2 border-dashed border-slate-200">
                     <Users className="mx-auto mb-6 opacity-10" size={80}/>
-                    <p className="font-black text-slate-300 uppercase tracking-[0.3em] italic text-xl">Keine Daten verfügbar</p>
+                    <p className="font-black text-slate-300 uppercase tracking-[0.3em] italic text-xl">Wähle eine Abteilung</p>
                   </div>
                 ) : filteredEmployees.map(emp => {
                   const empHours = hoursData.filter(h => h.employeeId === emp.id);
                   const total = empHours.reduce((s, h) => s + (h.hours || 0), 0);
                   return (
-                    <div key={emp.id} className="bg-white p-8 rounded-[3.5rem] border border-slate-200 flex flex-col xl:flex-row items-center gap-10 shadow-sm hover:shadow-2xl hover:border-blue-200 transition-all group relative overflow-hidden">
-                      <div className="w-64 shrink-0 relative z-10">
+                    <div key={emp.id} className="bg-white p-8 rounded-[3.5rem] border border-slate-200 flex flex-col xl:flex-row items-center gap-10 shadow-sm hover:shadow-2xl hover:border-blue-200 transition-all group">
+                      <div className="w-64 shrink-0">
                         <div className="flex items-center gap-5">
-                           <div className="w-16 h-16 bg-slate-50 rounded-[1.8rem] flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all duration-500">
+                           <div className="w-16 h-16 bg-slate-50 rounded-[1.8rem] flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all">
                               <Users size={32}/>
                            </div>
                            <div>
-                              <h3 className="font-black text-slate-900 text-xl tracking-tight truncate leading-tight italic uppercase">{emp.name}</h3>
-                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">ID-{(emp.id || "").substring(4,10)}</p>
+                              <h3 className="font-black text-slate-900 text-xl tracking-tight truncate uppercase italic leading-tight">{emp.name}</h3>
+                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Personal-ID</p>
                            </div>
                         </div>
                       </div>
 
-                      <div className="flex-1 grid grid-cols-4 md:grid-cols-7 gap-4 w-full relative z-10">
+                      <div className="flex-1 grid grid-cols-4 md:grid-cols-7 gap-4 w-full">
                         {weekdays.map(day => {
                           const isHol = holidays.some(h => h.weekday === day.id);
                           const entry = hoursData.find(h => h.employeeId === emp.id && h.weekday === day.id);
@@ -291,7 +307,7 @@ export default function App() {
                                   value={val}
                                   placeholder="0"
                                   onChange={(e) => updateHours(emp.id, day.id, e.target.value)}
-                                  className={`w-full h-16 text-center rounded-[1.5rem] font-black text-xl border-2 transition-all outline-none ${isHol ? 'bg-blue-50/50 border-blue-100 text-blue-700 focus:border-blue-400' : 'bg-slate-50 border-transparent text-slate-700 focus:bg-white focus:border-blue-400 focus:shadow-2xl focus:shadow-blue-500/10'}`}
+                                  className={`w-full h-16 text-center rounded-[1.5rem] font-black text-xl border-2 transition-all outline-none ${isHol ? 'bg-blue-50/50 border-blue-100 text-blue-700' : 'bg-slate-50 border-transparent text-slate-700 focus:bg-white focus:border-blue-400 shadow-sm'}`}
                                 />
                                 {isHol && <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white"></div>}
                               </div>
@@ -300,12 +316,10 @@ export default function App() {
                         })}
                       </div>
 
-                      <div className="bg-[#0f172a] px-10 py-7 rounded-[2.5rem] text-center min-w-[160px] shadow-2xl shadow-slate-900/20 group-hover:scale-105 transition-all duration-500 relative z-10 border border-slate-700">
-                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 italic">Total Stunden</div>
-                        <div className="text-4xl font-black text-white italic tracking-tighter">{total.toFixed(1)}<span className="text-sm ml-1 text-blue-500 not-italic uppercase">h</span></div>
+                      <div className="bg-[#0f172a] px-10 py-7 rounded-[2.5rem] text-center min-w-[160px] shadow-2xl group-hover:scale-105 transition-all">
+                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 italic">Total</div>
+                        <div className="text-4xl font-black text-white italic tracking-tighter">{total.toFixed(1)}<span className="text-sm ml-1 text-blue-500 uppercase not-italic">h</span></div>
                       </div>
-                      
-                      <div className="absolute right-0 top-0 h-full w-2 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </div>
                   );
                 })}
@@ -313,29 +327,28 @@ export default function App() {
             </div>
           )}
 
+          {/* ARCHIVE VIEW */}
           {view === 'archive' && (
             <div className="max-w-6xl mx-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[2024, 2025, 2026, 2027].map(year => (
                   <div key={year} className="bg-white p-10 rounded-[4rem] border border-slate-200 hover:border-blue-400 transition-all shadow-sm hover:shadow-2xl group text-center relative overflow-hidden">
-                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-slate-50 rounded-full group-hover:bg-blue-50 transition-colors duration-700"></div>
                     <div className="relative z-10">
-                      <div className="w-24 h-24 bg-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-400 mb-8 mx-auto group-hover:bg-blue-600 group-hover:text-white group-hover:rotate-[15deg] transition-all duration-500">
+                      <div className="w-24 h-24 bg-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-400 mb-8 mx-auto group-hover:bg-blue-600 group-hover:text-white transition-all">
                          <Archive size={44}/>
                       </div>
                       <h3 className="text-4xl font-black text-slate-900 mb-2 italic tracking-tighter uppercase">{year}</h3>
-                      <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-10">Datenbank {year}</p>
+                      <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-10">Archiviert</p>
                       
                       <button 
-                        onClick={() => handleExport(year)}
-                        disabled={exportingYear === year}
-                        className={`w-full py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${exportingYear === year ? 'bg-green-500 text-white' : 'bg-slate-900 text-white hover:bg-blue-600 shadow-xl shadow-slate-900/10'}`}
+                        onClick={() => {
+                          setExportingYear(year);
+                          setTimeout(() => setExportingYear(null), 2000);
+                        }}
+                        className={`w-full py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${exportingYear === year ? 'bg-green-500 text-white' : 'bg-slate-900 text-white hover:bg-blue-600 shadow-xl'}`}
                       >
-                        {exportingYear === year ? (
-                          <><CheckCircle size={20}/> Download bereit</>
-                        ) : (
-                          <><FileText size={20}/> Jahresbericht PDF</>
-                        )}
+                        {exportingYear === year ? <CheckCircle size={20}/> : <FileText size={20}/>}
+                        {exportingYear === year ? 'Download...' : 'Jahresbericht'}
                       </button>
                     </div>
                   </div>
@@ -346,53 +359,50 @@ export default function App() {
                  <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-4">
                        <Database className="text-blue-500" size={32}/>
-                       <h3 className="text-3xl font-black italic uppercase tracking-tighter">Sicherheit & Backup</h3>
+                       <h3 className="text-3xl font-black italic uppercase tracking-tighter">Daten-Integrität</h3>
                     </div>
                     <p className="text-slate-400 max-w-xl font-medium text-lg leading-relaxed">
-                       Alle Einträge werden in Echtzeit verschlüsselt und in der Cloud gesichert. Das Archiv ermöglicht den Zugriff auf historische Daten bis zu 10 Jahre rückwirkend.
+                       Sämtliche Stundenaufzeichnungen sind revisionssicher gespeichert. Das Archiv wird täglich synchronisiert.
                     </p>
                  </div>
-                 <div className="relative z-10 shrink-0">
-                    <div className="w-40 h-40 border-4 border-slate-800 rounded-full flex items-center justify-center">
-                       <History size={60} className="text-blue-500 animate-spin-slow"/>
-                    </div>
+                 <div className="relative z-10">
+                    <History size={100} className="text-blue-500/20 animate-pulse"/>
                  </div>
-                 <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 blur-[120px] rounded-full"></div>
               </div>
             </div>
           )}
 
+          {/* ADMIN VIEW */}
           {view === 'admin' && (
-            <div className="max-w-5xl mx-auto space-y-12 pb-32">
-              <section className="bg-white p-12 rounded-[4rem] border border-slate-200 shadow-sm relative overflow-hidden">
+            <div className="max-w-4xl mx-auto space-y-12">
+              <section className="bg-white p-12 rounded-[4rem] border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-5 mb-10">
                    <div className="w-14 h-14 bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-white">
                       <LayoutDashboard size={28}/>
                    </div>
-                   <h3 className="text-2xl font-black text-slate-900 italic uppercase tracking-tighter">Abteilungs-Verzeichnis</h3>
+                   <h3 className="text-2xl font-black text-slate-900 italic uppercase tracking-tighter">Abteilungen</h3>
                 </div>
                 
-                <form className="flex gap-4 mb-12" onSubmit={async (e) => {
+                <form className="flex gap-4 mb-10" onSubmit={async (e) => {
                   e.preventDefault();
                   const name = e.target.deptName.value;
                   if(!name) return;
-                  const id = name.toLowerCase().replace(/\s+/g, '-');
-                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', id), { name });
+                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', name.toLowerCase()), { name });
                   e.target.reset();
                 }}>
-                  <input name="deptName" placeholder="Neue Abteilung benennen..." className="flex-1 bg-slate-50 border-2 border-transparent rounded-[1.5rem] px-8 py-5 outline-none focus:border-blue-400 focus:bg-white transition-all font-bold text-lg" required />
-                  <button className="bg-blue-600 text-white px-10 rounded-[1.5rem] font-black text-sm uppercase tracking-widest hover:bg-blue-700 shadow-2xl shadow-blue-600/20 italic">Hinzufügen</button>
+                  <input name="deptName" placeholder="Abteilungsname..." className="flex-1 bg-slate-50 border-2 border-transparent rounded-[1.5rem] px-8 py-5 outline-none focus:border-blue-400 focus:bg-white transition-all font-bold" required />
+                  <button className="bg-blue-600 text-white px-10 rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-blue-700 italic">Neu</button>
                 </form>
 
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {departments.map(d => (
-                    <div key={d.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-[1.8rem] border border-slate-100 group hover:border-blue-200 transition-all hover:bg-white hover:shadow-xl">
-                      <span className="font-black text-slate-700 uppercase italic tracking-tight">{d.name}</span>
+                    <div key={d.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-[1.8rem] border border-slate-100 group hover:border-blue-200 transition-all">
+                      <span className="font-black text-slate-700 uppercase italic">{d.name}</span>
                       <button onClick={async () => {
-                         if(confirm(`Abteilung "${d.name}" wirklich löschen?`)) {
+                         if(confirm(`Abteilung "${d.name}" löschen?`)) {
                             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', d.id));
                          }
-                      }} className="w-12 h-12 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={20}/></button>
+                      }} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18}/></button>
                     </div>
                   ))}
                 </div>
@@ -403,40 +413,40 @@ export default function App() {
                    <div className="w-14 h-14 bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-white">
                       <Users size={28}/>
                    </div>
-                   <h3 className="text-2xl font-black text-slate-900 italic uppercase tracking-tighter">Mitarbeiter-Stamm</h3>
+                   <h3 className="text-2xl font-black text-slate-900 italic uppercase tracking-tighter">Personal</h3>
                 </div>
 
-                <form className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-12" onSubmit={async (e) => {
+                <form className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10" onSubmit={async (e) => {
                   e.preventDefault();
                   const name = e.target.empName.value;
                   const deptId = e.target.empDept.value;
                   if(!name || !deptId) return;
                   const id = `emp_${Date.now()}`;
-                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { name, department: deptId, active: true });
+                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { name, department: deptId });
                   e.target.reset();
                 }}>
-                  <input name="empName" placeholder="Name des Mitarbeiters..." className="bg-slate-50 border-2 border-transparent rounded-[1.5rem] px-8 py-5 outline-none focus:border-blue-400 focus:bg-white transition-all font-bold text-lg" required />
+                  <input name="empName" placeholder="Mitarbeiter Name..." className="bg-slate-50 border-2 border-transparent rounded-[1.5rem] px-8 py-5 outline-none focus:border-blue-400 focus:bg-white transition-all font-bold" required />
                   <div className="flex gap-4">
-                    <select name="empDept" className="flex-1 bg-slate-50 border-2 border-transparent rounded-[1.5rem] px-6 py-5 outline-none focus:border-blue-400 focus:bg-white transition-all font-black text-slate-500 uppercase tracking-widest text-sm appearance-none" required>
-                      <option value="">Abteilung wählen...</option>
+                    <select name="empDept" className="flex-1 bg-slate-50 border-2 border-transparent rounded-[1.5rem] px-6 py-5 outline-none font-black text-slate-500 uppercase tracking-widest text-xs" required>
+                      <option value="">Abteilung...</option>
                       {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
-                    <button className="bg-blue-600 text-white px-10 rounded-[1.5rem] font-black text-sm uppercase tracking-widest hover:bg-blue-700 shadow-2xl shadow-blue-600/20 italic">Add</button>
+                    <button className="bg-blue-600 text-white px-8 rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-blue-700 italic">Add</button>
                   </div>
                 </form>
 
-                <div className="grid gap-4">
+                <div className="space-y-3">
                   {employees.map(emp => (
-                    <div key={emp.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] border border-slate-100 group hover:border-blue-200 transition-all hover:bg-white hover:shadow-xl">
+                    <div key={emp.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] border border-slate-100 group hover:border-blue-200 transition-all">
                       <div className="flex flex-col">
-                        <span className="font-black text-slate-800 text-lg italic uppercase tracking-tight">{emp.name}</span>
-                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1">{departments.find(d => d.id === emp.department)?.name || 'Keine Zuweisung'}</span>
+                        <span className="font-black text-slate-800 text-lg italic uppercase">{emp.name}</span>
+                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{departments.find(d => d.id === emp.department)?.name}</span>
                       </div>
                       <button onClick={async () => {
-                         if(confirm(`Mitarbeiter "${emp.name}" wirklich entfernen?`)) {
+                         if(confirm(`Mitarbeiter entfernen?`)) {
                             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id));
                          }
-                      }} className="w-12 h-12 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={20}/></button>
+                      }} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18}/></button>
                     </div>
                   ))}
                 </div>
@@ -450,8 +460,6 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-spin-slow { animation: spin-slow 20s linear infinite; }
       `}} />
     </div>
   );

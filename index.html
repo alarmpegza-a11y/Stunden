@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PE-Fabrikation | Management System</title>
+    
+    <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -13,44 +15,58 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs (Compat Version für einfachere Einbindung) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; margin: 0; }
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .sidebar-item-active { background: #4f46e5; color: white; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2); }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Error Display Styles */
+        #error-display { display: none; padding: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; border-radius: 8px; margin: 20px; font-family: monospace; }
     </style>
 </head>
 <body>
+    <div id="error-display"></div>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // Firebase Setup
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "", authDomain: "stunden-9ddd7.firebaseapp.com", projectId: "stunden-9ddd7"
-        };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : "stunden-9ddd7";
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        // Sicherstellen, dass Firebase geladen ist
+        const initApp = () => {
+            try {
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+                    apiKey: "AIzaSyAQPBKR6zWPySBvh2EHMgsj9cY1_idNjyg",
+                    authDomain: "stunden-9ddd7.firebaseapp.com",
+                    projectId: "stunden-9ddd7"
+                };
+                
+                const appId = typeof __app_id !== 'undefined' ? __app_id : "stunden-9ddd7";
 
-        // Utils
-        const getWeek = (d) => {
-            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-            return Math.ceil((((date - new Date(Date.UTC(date.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
+                return { db: firebase.firestore(), auth: firebase.auth(), appId };
+            } catch (err) {
+                const errDiv = document.getElementById('error-display');
+                errDiv.style.display = 'block';
+                errDiv.innerHTML = "<strong>Firebase Initialisierungsfehler:</strong> " + err.message;
+                return null;
+            }
         };
 
+        const fb = initApp();
+
+        // Lucide Icons Placeholder (Inline SVG)
         const LucideIcon = ({ name, size = 18, className = "" }) => {
             const icons = {
                 FileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></>,
@@ -66,7 +82,17 @@
             return <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name]}</svg>;
         };
 
+        const getWeek = (d) => {
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+            return Math.ceil((((date - new Date(Date.UTC(date.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+        };
+
         const App = () => {
+            if (!fb) return <div className="p-10 text-red-600 font-bold">Firebase konnte nicht geladen werden. Bitte Internetverbindung und Konfiguration prüfen.</div>;
+            
+            const { db, auth, appId } = fb;
+
             const [user, setUser] = useState(null);
             const [view, setView] = useState('dashboard');
             const [selectedDept, setSelectedDept] = useState('');
@@ -81,46 +107,52 @@
 
             const exportMenuRef = useRef(null);
 
-            // Close export menu on outside click
+            // Auth Login
             useEffect(() => {
-                const handleClickOutside = (event) => {
-                    if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
-                        setShowExportMenu(false);
-                    }
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await auth.signInWithCustomToken(__initial_auth_token);
+                        } else {
+                            await auth.signInAnonymously();
+                        }
+                    } catch (e) { console.error("Login Fehler", e); }
                 };
-                document.addEventListener("mousedown", handleClickOutside);
-                return () => document.removeEventListener("mousedown", handleClickOutside);
+                initAuth();
+                const unsubscribe = auth.onAuthStateChanged(setUser);
+                return () => unsubscribe();
             }, []);
 
-            // Auth
-            useEffect(() => {
-                const init = async () => {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await auth.signInWithCustomToken(__initial_auth_token);
-                    } else {
-                        await auth.signInAnonymously();
-                    }
-                };
-                init();
-                return auth.onAuthStateChanged(setUser);
-            }, []);
-
-            // Data Fetch
+            // Data Fetching
             useEffect(() => {
                 if (!user) return;
-                const unsub1 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('departments').onSnapshot(s => {
+                
+                const rootRef = db.collection('artifacts').doc(appId).collection('public').doc('data');
+
+                const unsub1 = rootRef.collection('departments').onSnapshot(s => {
                     const d = s.docs.map(doc => ({id: doc.id, ...doc.data()}));
                     setDepts(d);
                     if (d.length && !selectedDept) setSelectedDept(d[0].id);
                 });
-                const unsub2 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('employees').where('active', '==', true).onSnapshot(s => setEmployees(s.docs.map(doc => ({id: doc.id, ...doc.data()}))));
-                const unsub3 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('hours').where('year', '==', currentYear).where('week', '==', currentWeek).onSnapshot(s => setHours(s.docs.map(doc => doc.data())), err => console.error(err));
-                const unsub4 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('holidays').where('year', '==', currentYear).where('week', '==', currentWeek).onSnapshot(s => setHolidays(s.docs.map(doc => doc.data())), err => console.error(err));
+
+                const unsub2 = rootRef.collection('employees').where('active', '==', true).onSnapshot(s => {
+                    setEmployees(s.docs.map(doc => ({id: doc.id, ...doc.data()})));
+                });
+
+                const unsub3 = rootRef.collection('hours')
+                    .where('year', '==', currentYear)
+                    .where('week', '==', currentWeek)
+                    .onSnapshot(s => setHours(s.docs.map(doc => doc.data())), err => console.error("Hours Error", err));
+
+                const unsub4 = rootRef.collection('holidays')
+                    .where('year', '==', currentYear)
+                    .where('week', '==', currentWeek)
+                    .onSnapshot(s => setHolidays(s.docs.map(doc => doc.data())), err => console.error("Holiday Error", err));
                 
                 return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
             }, [user, currentWeek, currentYear, selectedDept]);
 
-            // PDF Generation
+            // PDF Logic
             const generatePDF = async (type = 'week', deptId = selectedDept) => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
@@ -129,56 +161,31 @@
                 const dateStr = type === 'week' ? `KW ${currentWeek} / ${currentYear}` : `${currentYear}`;
 
                 doc.setFontSize(22);
-                doc.setTextColor(40);
                 doc.text("Stundenabrechnung PE-Fabrikation", 14, 22);
-                
                 doc.setFontSize(12);
                 doc.text(`Abteilung: ${deptName}`, 14, 32);
                 doc.text(`Zeitraum: ${type.toUpperCase()} - ${dateStr}`, 14, 38);
-                doc.text(`Erstellt am: ${new Date().toLocaleDateString('de-DE')}`, 14, 44);
 
                 let reportData = [];
-                if (type === 'week') {
-                    const deptEmps = employees.filter(e => e.department === deptId);
-                    reportData = deptEmps.map(e => {
-                        const empHours = hours.filter(h => h.employeeId === e.id);
-                        const total = empHours.reduce((sum, h) => sum + (h.hours || 0), 0);
-                        return [e.name, total.toFixed(2) + " h"];
-                    });
-                } else if (type === 'year') {
-                    // Für Jahresbericht ziehen wir alle Stunden dieses Jahres
-                    const yearData = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('hours')
-                                    .where('year', '==', currentYear)
-                                    .where('departmentId', '==', deptId).get();
-                    
-                    const yearHours = yearData.docs.map(d => d.data());
-                    const deptEmps = employees.filter(e => e.department === deptId);
-                    
-                    reportData = deptEmps.map(e => {
-                        const total = yearHours.filter(h => h.employeeId === e.id).reduce((sum, h) => sum + (h.hours || 0), 0);
-                        return [e.name, total.toFixed(2) + " h"];
-                    });
-                }
+                const deptEmps = employees.filter(e => e.department === deptId);
+                
+                reportData = deptEmps.map(e => {
+                    const total = hours.filter(h => h.employeeId === e.id).reduce((sum, h) => sum + (h.hours || 0), 0);
+                    return [e.name, total.toFixed(2) + " h"];
+                });
 
                 doc.autoTable({
-                    startY: 55,
+                    startY: 50,
                     head: [['Mitarbeiter', 'Gesamtstunden']],
                     body: reportData,
                     theme: 'striped',
                     headStyles: { fillColor: [79, 70, 229] }
                 });
 
-                doc.save(`Abrechnung_${deptName}_${type}_${dateStr}.pdf`);
+                doc.save(`Abrechnung_${deptName}_${type}.pdf`);
                 setShowExportMenu(false);
             };
 
-            const exportAllDeptsYearly = async () => {
-                for(const d of depts) {
-                    await generatePDF('year', d.id);
-                }
-            };
-
-            // Employee Save
             const saveHours = async (empId, day, val) => {
                 const docId = `${currentYear}_${currentWeek}_${empId}_${day}`;
                 const employee = employees.find(e => e.id === empId);
@@ -202,10 +209,7 @@
                     await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('holidays').doc(docId).delete();
                 } else {
                     await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('holidays').doc(docId).set({
-                        year: currentYear,
-                        week: currentWeek,
-                        weekday: day,
-                        isHoliday: true
+                        year: currentYear, week: currentWeek, weekday: day, isHoliday: true
                     });
                 }
             };
@@ -213,16 +217,15 @@
             const filteredEmps = employees.filter(e => e.department === selectedDept);
 
             return (
-                <div className="flex h-screen overflow-hidden text-slate-700">
-                    {/* Sidebar */}
+                <div className="flex h-screen overflow-hidden text-slate-700 bg-slate-50">
+                    {/* Navigation Sidebar */}
                     <nav className="w-72 bg-slate-900 text-white flex flex-col p-6 space-y-8 z-30 shadow-2xl">
                         <div className="flex items-center space-x-3 px-2">
-                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-xl text-white">PE</div>
-                            <h1 className="text-lg font-extrabold tracking-tight text-white">MANAGEMENT <span className="block text-indigo-400 text-[10px] tracking-widest uppercase">Fabrikation</span></h1>
+                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-xl">PE</div>
+                            <h1 className="text-lg font-extrabold tracking-tight">MANAGEMENT <span className="block text-indigo-400 text-[10px] uppercase tracking-widest">Fabrikation</span></h1>
                         </div>
 
                         <div className="space-y-1">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-3 mb-2">Navigation</p>
                             <button onClick={() => setView('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${view === 'dashboard' ? 'sidebar-item-active' : 'hover:bg-slate-800 text-slate-400'}`}>
                                 <LucideIcon name="Layout" /> <span className="font-semibold text-sm">Dashboard</span>
                             </button>
@@ -244,67 +247,33 @@
                         </div>
                     </nav>
 
-                    {/* Main Area */}
-                    <main className="flex-1 flex flex-col bg-slate-50 relative">
-                        {/* Header */}
+                    <main className="flex-1 flex flex-col relative overflow-hidden">
                         <header className="h-20 bg-white border-b border-slate-200 px-10 flex items-center justify-between">
                             <div className="flex items-center space-x-6">
-                                <h2 className="text-xl font-bold text-slate-800 capitalize">{view === 'dashboard' ? 'Arbeitszeit-Erfassung' : view === 'admin' ? 'Verwaltung' : 'Archiv'}</h2>
-                                <div className="h-8 w-[1px] bg-slate-200"></div>
+                                <h2 className="text-xl font-bold text-slate-800">{view === 'dashboard' ? 'Zeiterfassung' : 'Verwaltung'}</h2>
                                 <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                                    <button onClick={() => setCurrentWeek(w => Math.max(1, w-1))} className="p-1.5 hover:bg-white rounded-md transition-all text-slate-500"><LucideIcon name="Plus" size={16} className="rotate-45"/></button>
-                                    <span className="px-4 font-bold text-sm text-slate-600">KW {currentWeek}</span>
-                                    <button onClick={() => setCurrentWeek(w => Math.min(52, w+1))} className="p-1.5 hover:bg-white rounded-md transition-all text-slate-500"><LucideIcon name="Plus" size={16} /></button>
+                                    <button onClick={() => setCurrentWeek(w => Math.max(1, w-1))} className="p-1.5 hover:bg-white rounded-md"><LucideIcon name="Plus" size={16} className="rotate-45"/></button>
+                                    <span className="px-4 font-bold text-sm">KW {currentWeek}</span>
+                                    <button onClick={() => setCurrentWeek(w => Math.min(52, w+1))} className="p-1.5 hover:bg-white rounded-md"><LucideIcon name="Plus" size={16} /></button>
                                 </div>
                             </div>
                             
-                            <div className="flex items-center space-x-3">
-                                {view === 'dashboard' && (
-                                    <div className="relative" ref={exportMenuRef}>
-                                        <button 
-                                            onClick={() => setShowExportMenu(!showExportMenu)}
-                                            className="flex items-center space-x-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
-                                        >
-                                            <LucideIcon name="Download" size={16}/> <span>Bericht erstellen</span>
-                                        </button>
-                                        {showExportMenu && (
-                                            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 p-2 animate-in fade-in zoom-in-95 duration-150">
-                                                <div className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Exportieren für {depts.find(d => d.id === selectedDept)?.name}</div>
-                                                <button onClick={() => generatePDF('week')} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700">Wochenbericht (KW {currentWeek})</button>
-                                                <button onClick={() => generatePDF('year')} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700">Jahresbericht ({currentYear})</button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-white overflow-hidden">
-                                    <img src={`https://ui-avatars.com/api/?name=Admin&background=random`} alt="User" />
-                                </div>
-                            </div>
+                            <button onClick={() => generatePDF('week')} className="flex items-center space-x-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-700 transition-all">
+                                <LucideIcon name="Download" size={16}/> <span>Wochen-PDF</span>
+                            </button>
                         </header>
 
-                        {/* Content Scrollable */}
                         <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
                             {view === 'dashboard' && (
                                 <div className="max-w-6xl mx-auto space-y-6">
-                                    {/* Holiday Selector Bar */}
-                                    <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between mb-2">
-                                        <div className="flex items-center space-x-3 text-slate-500 font-bold text-xs uppercase tracking-widest">
-                                            <LucideIcon name="Calendar" className="text-indigo-600" />
-                                            <span>Feiertage in KW {currentWeek} markieren:</span>
-                                        </div>
+                                    <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center space-x-4">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Feiertage:</span>
                                         <div className="flex space-x-2">
-                                            {[1,2,3,4,5,6,7].map(day => {
-                                                const isHoliday = holidays.find(h => h.weekday === day);
-                                                return (
-                                                    <button 
-                                                        key={day}
-                                                        onClick={() => toggleHoliday(day)}
-                                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${isHoliday ? 'bg-amber-100 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
-                                                    >
-                                                        {['Mo','Di','Mi','Do','Fr','Sa','So'][day-1]}
-                                                    </button>
-                                                )
-                                            })}
+                                            {[1,2,3,4,5,6,7].map(day => (
+                                                <button key={day} onClick={() => toggleHoliday(day)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${holidays.find(h => h.weekday === day) ? 'bg-amber-100 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                                                    {['Mo','Di','Mi','Do','Fr','Sa','So'][day-1]}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
 
@@ -313,72 +282,41 @@
                                             const empHours = hours.filter(h => h.employeeId === emp.id);
                                             const total = empHours.reduce((sum, h) => sum + (h.hours || 0), 0);
                                             return (
-                                                <div key={emp.id} className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col md:flex-row items-center justify-between group hover:shadow-xl hover:shadow-slate-200/50 transition-all">
-                                                    <div className="flex items-center space-x-6 w-full md:w-1/3 mb-4 md:mb-0">
-                                                        <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center font-bold text-indigo-600 text-lg">
-                                                            {emp.name.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-slate-800 leading-tight">{emp.name}</h4>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mitarbeiter-ID: {emp.id.substring(0,6)}</p>
-                                                        </div>
+                                                <div key={emp.id} className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col md:flex-row items-center justify-between hover:shadow-xl transition-all">
+                                                    <div className="w-full md:w-1/3">
+                                                        <h4 className="font-bold text-slate-800">{emp.name}</h4>
+                                                        <p className="text-[10px] text-slate-400">ID: {emp.id.substring(0,6)}</p>
                                                     </div>
 
-                                                    <div className="flex-1 flex justify-center space-x-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                                                        {[1,2,3,4,5,6,7].map(day => {
-                                                            const h = empHours.find(r => r.weekday === day)?.hours || 0;
-                                                            const isHoliday = holidays.find(hol => hol.weekday === day);
-                                                            const hasWarning = isHoliday && h > 0;
-                                                            return (
-                                                                <div key={day} className="flex flex-col items-center min-w-[50px]">
-                                                                    <span className={`text-[9px] font-bold uppercase mb-1 ${isHoliday ? 'text-amber-600' : 'text-slate-300'}`}>
-                                                                        {['Mo','Di','Mi','Do','Fr','Sa','So'][day-1]}
-                                                                    </span>
-                                                                    <div className="relative">
-                                                                        <input 
-                                                                            type="number" 
-                                                                            step="0.25"
-                                                                            value={h || ''} 
-                                                                            placeholder="0"
-                                                                            onChange={(e) => saveHours(emp.id, day, e.target.value)}
-                                                                            className={`w-12 h-10 text-center rounded-lg text-sm font-bold border-2 transition-all outline-none ${h > 0 ? (isHoliday ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-indigo-50 border-indigo-200 text-indigo-700') : 'bg-slate-50 border-slate-100 text-slate-400 focus:bg-white focus:border-indigo-300'}`}
-                                                                        />
-                                                                        {hasWarning && (
-                                                                            <div className="absolute -top-1 -right-1 bg-amber-500 text-white p-0.5 rounded-full ring-2 ring-white">
-                                                                                <LucideIcon name="Alert" size={8} />
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    {hasWarning && <span className="text-[7px] text-amber-600 font-bold mt-1 text-center leading-[1]">Feiertag!</span>}
-                                                                </div>
-                                                            );
-                                                        })}
+                                                    <div className="flex-1 flex justify-center space-x-2 my-4 md:my-0">
+                                                        {[1,2,3,4,5,6,7].map(day => (
+                                                            <div key={day} className="flex flex-col items-center">
+                                                                <span className="text-[9px] font-bold text-slate-300 uppercase mb-1">{['Mo','Di','Mi','Do','Fr','Sa','So'][day-1]}</span>
+                                                                <input 
+                                                                    type="number" 
+                                                                    value={empHours.find(r => r.weekday === day)?.hours || ''} 
+                                                                    placeholder="0"
+                                                                    onChange={(e) => saveHours(emp.id, day, e.target.value)}
+                                                                    className="w-12 h-10 text-center rounded-lg text-sm font-bold border-2 bg-slate-50 border-slate-100 outline-none focus:border-indigo-300"
+                                                                />
+                                                            </div>
+                                                        ))}
                                                     </div>
 
-                                                    <div className="w-full md:w-48 flex flex-col items-end mt-4 md:mt-0">
-                                                        <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Stunden</span>
-                                                        <div className="text-3xl font-black text-indigo-600 tracking-tighter">
-                                                            {total.toFixed(1).replace('.', ',')} <span className="text-sm font-bold text-slate-300">h</span>
-                                                        </div>
+                                                    <div className="text-right">
+                                                        <div className="text-3xl font-black text-indigo-600">{total.toFixed(1)} <span className="text-sm text-slate-300">h</span></div>
                                                     </div>
                                                 </div>
                                             );
                                         })}
-                                        {filteredEmps.length === 0 && (
-                                            <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                                                <LucideIcon name="FileText" size={40} className="mx-auto text-slate-300 mb-4" />
-                                                <p className="text-slate-400 font-medium">Keine Mitarbeiter in dieser Abteilung.</p>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             )}
 
                             {view === 'admin' && (
-                                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    {/* Personal */}
-                                    <div className="bg-white rounded-3xl border border-slate-200 p-8 space-y-6 shadow-sm">
-                                        <h3 className="text-lg font-bold flex items-center gap-2"><LucideIcon name="FileText" className="text-indigo-600"/> Personal-Stamm</h3>
+                                <div className="max-w-4xl mx-auto space-y-8">
+                                    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                                        <h3 className="text-lg font-bold mb-6">Neuer Mitarbeiter</h3>
                                         <form onSubmit={async (e) => {
                                             e.preventDefault();
                                             const name = e.target.name.value;
@@ -387,144 +325,13 @@
                                                 name, department: dept, active: true
                                             });
                                             e.target.reset();
-                                        }} className="space-y-3">
-                                            <input name="name" placeholder="Name, Vorname" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 ring-indigo-500/20" required/>
-                                            <select name="dept" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none" required>
+                                        }} className="flex gap-4">
+                                            <input name="name" placeholder="Vorname Nachname" className="flex-1 bg-slate-50 border rounded-xl px-4 py-3" required/>
+                                            <select name="dept" className="bg-slate-50 border rounded-xl px-4 py-3" required>
                                                 {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                             </select>
-                                            <button className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm">Hinzufügen</button>
+                                            <button className="bg-slate-900 text-white px-8 rounded-xl font-bold">Hinzufügen</button>
                                         </form>
-                                        <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                                            {employees.map(e => (
-                                                <div key={e.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl text-sm border border-slate-100">
-                                                    <span className="font-bold">{e.name}</span>
-                                                    <button onClick={() => db.collection('artifacts').doc(appId).collection('public').doc('data').collection('employees').doc(e.id).update({active: false})} className="text-slate-300 hover:text-red-500"><LucideIcon name="Trash" size={16}/></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Abteilungen */}
-                                    <div className="bg-white rounded-3xl border border-slate-200 p-8 space-y-6 shadow-sm">
-                                        <h3 className="text-lg font-bold flex items-center gap-2"><LucideIcon name="Layout" className="text-indigo-600"/> Strukturen</h3>
-                                        <form onSubmit={async (e) => {
-                                            e.preventDefault();
-                                            const name = e.target.deptName.value;
-                                            const id = name.toLowerCase().replace(/\s/g, '-');
-                                            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('departments').doc(id).set({ name });
-                                            e.target.reset();
-                                        }} className="space-y-3">
-                                            <input name="deptName" placeholder="Abteilungsname" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 ring-indigo-500/20" required/>
-                                            <button className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm">Bereich erstellen</button>
-                                        </form>
-                                        <div className="space-y-2">
-                                            {depts.map(d => (
-                                                <div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl text-sm border border-slate-100">
-                                                    <span className="font-bold">{d.name}</span>
-                                                    <button onClick={() => db.collection('artifacts').doc(appId).collection('public').doc('data').collection('departments').doc(d.id).delete()} className="text-slate-300 hover:text-red-500"><LucideIcon name="Trash" size={16}/></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {view === 'archive' && (
-                                <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-                                    <div className="bg-indigo-900 rounded-[2rem] p-10 text-white relative overflow-hidden shadow-2xl">
-                                        <div className="relative z-10 flex justify-between items-center">
-                                            <div>
-                                                <h3 className="text-3xl font-black mb-2 tracking-tight">DATEN-ARCHIV</h3>
-                                                <p className="text-indigo-300 text-sm font-medium">Durchsuchen Sie historische Abrechnungen und exportieren Sie Berichte.</p>
-                                            </div>
-                                            <button 
-                                                onClick={exportAllDeptsYearly}
-                                                className="bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-xl flex items-center gap-2 transition-all"
-                                            >
-                                                <LucideIcon name="Download" /> Alle Abteilungen ({currentYear})
-                                            </button>
-                                        </div>
-                                        <LucideIcon name="Archive" size={120} className="absolute -right-8 -bottom-8 text-indigo-800 opacity-50 rotate-12" />
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                                            <div>
-                                                <h4 className="font-bold text-slate-800 mb-4">Zeitraum wählen</h4>
-                                                <div className="space-y-4">
-                                                    <div>
-                                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Jahr</label>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {[2024, 2025, 2026, 2027].map(y => (
-                                                                <button 
-                                                                    key={y}
-                                                                    onClick={() => setCurrentYear(y)}
-                                                                    className={`py-2 rounded-xl text-xs font-bold border transition-all ${currentYear === y ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'}`}
-                                                                >
-                                                                    {y}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Kalenderwoche</label>
-                                                        <select value={currentWeek} onChange={(e) => setCurrentWeek(parseInt(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-indigo-500/10">
-                                                            {[...Array(52)].map((_, i) => <option key={i+1} value={i+1}>KW {i+1}</option>)}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="mt-8 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-                                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1 italic">Tipp</p>
-                                                <p className="text-[11px] text-indigo-700 leading-relaxed">Klicken Sie oben auf das Jahr oder unten auf eine Abteilung, um die entsprechenden Daten im Dashboard einzusehen oder Berichte zu ziehen.</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="md:col-span-2 bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                                            <table className="w-full text-left">
-                                                <thead className="bg-slate-50 border-b border-slate-200">
-                                                    <tr>
-                                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Abteilung</th>
-                                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Personal</th>
-                                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Wochen-Total</th>
-                                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aktion</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100">
-                                                    {depts.map(d => {
-                                                        const deptEmps = employees.filter(e => e.department === d.id);
-                                                        const deptHours = hours.filter(h => h.departmentId === d.id);
-                                                        const sum = deptHours.reduce((acc, h) => acc + (h.hours || 0), 0);
-                                                        return (
-                                                            <tr key={d.id} className="hover:bg-slate-50/50 transition-all group">
-                                                                <td className="px-6 py-4 font-bold text-sm">{d.name}</td>
-                                                                <td className="px-6 py-4 text-xs font-medium text-slate-500">{deptEmps.length} Pers.</td>
-                                                                <td className="px-6 py-4 font-black text-indigo-600">{sum.toFixed(1)} h</td>
-                                                                <td className="px-6 py-4">
-                                                                    <div className="flex space-x-2">
-                                                                        <button 
-                                                                            onClick={() => {setSelectedDept(d.id); setView('dashboard')}}
-                                                                            className="p-2 bg-slate-100 text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"
-                                                                            title="Anzeigen"
-                                                                        >
-                                                                            <LucideIcon name="Layout" size={14}/>
-                                                                        </button>
-                                                                        <button 
-                                                                            onClick={() => generatePDF('year', d.id)}
-                                                                            className="p-2 bg-slate-100 text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"
-                                                                            title="Jahres-PDF"
-                                                                        >
-                                                                            <LucideIcon name="Download" size={14}/>
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        )
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -534,8 +341,14 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        } catch (e) {
+            console.error("Render Error", e);
+            document.getElementById('error-display').style.display = 'block';
+            document.getElementById('error-display').innerText = "Render Fehler: " + e.message;
+        }
     </script>
 </body>
 </html>

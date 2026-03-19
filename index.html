@@ -54,7 +54,7 @@
             </div>
 
             <div class="max-w-7xl mx-auto" id="content-area">
-                <!-- Content will be injected here -->
+                <!-- Initialer Ladezustand -->
                 <div class="flex flex-col items-center justify-center h-64 gap-4">
                     <i data-lucide="loader-2" class="w-10 h-10 text-blue-500 animate-spin"></i>
                     <p class="text-sm font-bold text-slate-400 animate-pulse">Initialisiere Cloud-Synchronisierung...</p>
@@ -67,7 +67,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, addDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Firebase Setup
         const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
@@ -85,7 +85,8 @@
             holidays: {},
             currentWeek: getWeekNumber(new Date()),
             currentYear: new Date().getFullYear(),
-            selectedDept: 'all'
+            selectedDept: 'all',
+            isLoading: true
         };
 
         // --- Core Functions ---
@@ -114,17 +115,20 @@
                     state.user = user;
                     if (user) {
                         document.getElementById('user-display').innerText = `ID: ${user.uid}`;
-                        setupListeners(); // Listener erst starten, wenn User da ist
+                        setupListeners();
                     } else {
                         document.getElementById('user-display').innerText = `Nicht angemeldet`;
+                        state.isLoading = false;
+                        updateUI();
                     }
                 });
             } catch (err) {
                 console.error("Auth Error:", err);
+                state.isLoading = false;
                 document.getElementById('content-area').innerHTML = `
                     <div class="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-200">
                         <h3 class="font-bold uppercase mb-2">Verbindungsfehler</h3>
-                        <p class="text-sm">Die Cloud-Verbindung konnte nicht hergestellt werden. Bitte prüfen Sie Ihre Firebase-Einstellungen.</p>
+                        <p class="text-sm">${err.message || 'Die Cloud-Verbindung konnte nicht hergestellt werden.'}</p>
                     </div>
                 `;
             }
@@ -133,33 +137,37 @@
         function setupListeners() {
             if (!state.user) return;
 
-            // Regel 1: Verwendung der korrekten Pfadstruktur
             const deptsRef = collection(db, 'artifacts', appId, 'public', 'data', 'departments');
             const empsRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
-            const holsRef = collection(db, 'artifacts', appId, 'public', 'data', 'holidays');
             const hoursRef = collection(db, 'artifacts', appId, 'public', 'data', 'hours');
 
-            // Error-Callbacks für onSnapshot sind zwingend erforderlich
+            // Erste Datenladung markiert Ende von isLoading
+            let loadedCount = 0;
+            const checkInitialLoad = () => {
+                loadedCount++;
+                if (loadedCount >= 2) { // Deperatments und Employees sind kritisch
+                    state.isLoading = false;
+                    updateUI();
+                }
+            };
+
             onSnapshot(deptsRef, (snap) => {
                 state.departments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                checkInitialLoad();
+            }, (err) => {
+                console.error("Snapshot Error Depts:", err);
+                state.isLoading = false;
                 updateUI();
-            }, (err) => console.error("Snapshot Error Depts:", err));
+            });
 
             onSnapshot(empsRef, (snap) => {
                 state.employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                checkInitialLoad();
+            }, (err) => {
+                console.error("Snapshot Error Emps:", err);
+                state.isLoading = false;
                 updateUI();
-            }, (err) => console.error("Snapshot Error Emps:", err));
-
-            onSnapshot(holsRef, (snap) => {
-                state.holidays = {};
-                snap.docs.forEach(d => {
-                    const data = d.data();
-                    if (data.year === state.currentYear && data.week === state.currentWeek) {
-                        state.holidays[data.weekday] = data.isHoliday;
-                    }
-                });
-                updateUI();
-            }, (err) => console.error("Snapshot Error Holidays:", err));
+            });
 
             onSnapshot(hoursRef, (snap) => {
                 state.hours = {};
@@ -178,6 +186,8 @@
             const container = document.getElementById('content-area');
             if (!container) return;
             
+            if (state.isLoading) return; // Behalte Lade-Spinner bei
+
             // Sidebar Update
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'shadow-lg', 'text-white');
@@ -231,7 +241,7 @@
                                     ${weekdays.map(d => `<th class="p-2 text-[10px] font-black uppercase text-slate-500 text-center">${d.substring(0,2)}</th>`).join('')}
                                     <th class="p-6 text-[10px] font-black uppercase text-blue-600 text-right tracking-widest">Summe</th>
                                 </tr>
-                                ${filteredEmps.length === 0 ? `<tr><td colspan="9" class="p-10 text-center text-slate-400 font-bold italic">Kein Personal gefunden.</td></tr>` : 
+                                ${filteredEmps.length === 0 ? `<tr><td colspan="9" class="p-10 text-center text-slate-400 font-bold italic">Kein Personal in dieser Auswahl gefunden.</td></tr>` : 
                                 filteredEmps.map(emp => {
                                     let total = 0;
                                     weekdays.forEach(d => total += (state.hours[`${emp.id}_${d}`] || 0));
@@ -326,13 +336,12 @@
             `;
         }
 
-        // --- Global Action Handlers ---
+        // --- Action Handlers ---
         window.changeWeek = (offset) => {
             state.currentWeek += offset;
             if (state.currentWeek > 52) { state.currentWeek = 1; state.currentYear++; }
             if (state.currentWeek < 1) { state.currentWeek = 52; state.currentYear--; }
             updateUI();
-            setupListeners(); // Reload data for new week
         };
 
         window.setDeptFilter = (id) => {
@@ -352,24 +361,21 @@
         };
 
         window.addDept = async () => {
-            if (!state.user) return;
             const input = document.getElementById('new-dept-input');
-            const name = input.value;
-            if (!name) return;
+            const name = input.value.trim();
+            if (!name || !state.user) return;
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), { name });
             input.value = '';
         };
 
         window.addEmp = async () => {
-            if (!state.user) return;
             const nameInput = document.getElementById('new-emp-name');
             const deptInput = document.getElementById('new-emp-dept');
-            const name = nameInput.value;
+            const name = nameInput.value.trim();
             const dept = deptInput.value;
-            if (!name || !dept) return;
+            if (!name || !dept || !state.user) return;
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), { name, department: dept });
             nameInput.value = '';
-            deptInput.value = '';
         };
 
         window.deleteDocItem = async (col, id) => {
@@ -377,7 +383,6 @@
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
         };
 
-        // Start initialization
         init();
     </script>
 </body>

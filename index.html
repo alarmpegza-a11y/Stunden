@@ -1,575 +1,541 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Users, 
-  Clipboard, 
-  FileText, 
-  Calendar, 
-  ChevronLeft, 
-  ChevronRight, 
-  Save, 
-  Plus, 
-  LayoutDashboard,
-  Archive,
-  Settings,
-  Trash2,
-  X,
-  ChevronDown
-} from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  onSnapshot, 
-  query, 
-  where, 
-  serverTimestamp,
-  writeBatch,
-  getDocs,
-  deleteDoc
-} from 'firebase/firestore';
-import { 
-  getAuth, 
-  signInAnonymously, 
-  signInWithCustomToken,
-  onAuthStateChanged 
-} from 'firebase/auth';
-
-// --- FIREBASE KONFIGURATION ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAQPBKR6zWPySBvh2EHMgsj9cY1_idNjyg",
-  authDomain: "stunden-9ddd7.firebaseapp.com",
-  projectId: "stunden-9ddd7",
-  storageBucket: "stunden-9ddd7.firebasestorage.app",
-  messagingSenderId: "324186463586",
-  appId: "1:324186463586:web:ee4ed33cca2d8d0ac9a03b"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = "stunden-9ddd7"; 
-
-// --- HILFSFUNKTIONEN ---
-const CURRENT_DATE = new Date('2026-03-19');
-
-const getWeekNumber = (d) => {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-  return [date.getUTCFullYear(), weekNo];
-};
-
-const formatNumber = (num) => (num === 0 || !num) ? '–' : num.toFixed(1).replace('.', ',');
-
-// Skript-Loader für PDF-Bibliotheken
-const loadScript = (src) => {
-  return new Promise((resolve) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve(true);
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.head.appendChild(script);
-  });
-};
-
-// --- KOMPONENTEN ---
-
-const AdminManagement = ({ departments, employees, appId, db }) => {
-  const [newDeptName, setNewDeptName] = useState('');
-  const [newEmpName, setNewEmpName] = useState('');
-  const [newEmpDept, setNewEmpDept] = useState('');
-
-  const addDepartment = async (e) => {
-    e.preventDefault();
-    if (!newDeptName) return;
-    const id = newDeptName.toLowerCase().replace(/\s+/g, '-');
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', id), {
-      name: newDeptName,
-      sortOrder: departments.length + 1
-    });
-    setNewDeptName('');
-  };
-
-  const addEmployee = async (e) => {
-    e.preventDefault();
-    if (!newEmpName || !newEmpDept) return;
-    const id = `emp_${Date.now()}`;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), {
-      name: newEmpName,
-      department: newEmpDept,
-      active: true
-    });
-    setNewEmpName('');
-  };
-
-  const deleteEmployee = async (id) => {
-    if (window.confirm("Mitarbeiter wirklich löschen?")) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { active: false }, { merge: true });
-    }
-  };
-
-  return (
-    <div className="flex-1 overflow-y-auto p-12 bg-white">
-      <div className="max-w-5xl mx-auto space-y-12">
-        <h2 className="text-3xl font-black text-slate-900 mb-8 uppercase tracking-tighter">Verwaltung</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          <section className="space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2"><Settings size={20} className="text-blue-500"/> Abteilungen</h3>
-            <form onSubmit={addDepartment} className="flex gap-2">
-              <input value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="Neue Abteilung..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500" />
-              <button type="submit" className="bg-blue-600 text-white p-2 rounded-xl hover:bg-blue-700"><Plus/></button>
-            </form>
-            <div className="space-y-2">
-              {departments.map(d => (
-                <div key={d.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
-                  <span className="font-semibold">{d.name}</span>
-                  <button onClick={async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', d.id))} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section className="space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2"><Users size={20} className="text-green-500"/> Mitarbeiter</h3>
-            <form onSubmit={addEmployee} className="space-y-2">
-              <input value={newEmpName} onChange={(e) => setNewEmpName(e.target.value)} placeholder="Vollständiger Name..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500" />
-              <div className="flex gap-2">
-                <select value={newEmpDept} onChange={(e) => setNewEmpDept(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Abteilung wählen...</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-                <button type="submit" className="bg-green-600 text-white px-6 rounded-xl hover:bg-green-700 font-bold">Anlegen</button>
-              </div>
-            </form>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-              {employees.map(e => (
-                <div key={e.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
-                  <div>
-                    <div className="font-semibold">{e.name}</div>
-                    <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{e.department}</div>
-                  </div>
-                  <button onClick={() => deleteEmployee(e.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const EditModal = ({ employee, week, year, initialData, onClose, appId, db, user }) => {
-  const [formData, setFormData] = useState({ 1: initialData?.[1] || 0, 2: initialData?.[2] || 0, 3: initialData?.[3] || 0, 4: initialData?.[4] || 0, 5: initialData?.[5] || 0, 6: initialData?.[6] || 0, 7: initialData?.[7] || 0 });
-  const [holidays, setHolidays] = useState({ 1: false, 2: false, 3: false, 4: false, 5: false, 6: false, 7: false });
-  const [saving, setSaving] = useState(false);
-  const days = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
-
-  const handleSave = async () => {
-    if (!user) return;
-    setSaving(true);
-    try {
-      const batch = writeBatch(db);
-      for (let i = 1; i <= 7; i++) {
-        const docId = `h_${year}_${week}_${employee.id}_${i}`;
-        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId);
-        batch.set(ref, {
-          employeeId: employee.id,
-          department: employee.department,
-          year: year,
-          week: week,
-          weekday: i,
-          hours: holidays[i] ? 0 : parseFloat(formData[i] || 0),
-          isHoliday: holidays[i],
-          date: new Date(year, 0, (week - 1) * 7 + (i - 1) + 4).toISOString(),
-          createdBy: user.uid,
-          createdAt: serverTimestamp()
-        });
-      }
-      await batch.commit();
-      onClose();
-    } catch (e) { console.error(e); alert("Fehler beim Speichern."); } finally { setSaving(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div>
-            <h2 className="text-xl font-bold text-slate-800">{employee.name}</h2>
-            <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">KW {week} — {year}</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"><X size={24} /></button>
-        </div>
-        <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
-          {days.map((day, idx) => {
-            const i = idx + 1;
-            return (
-              <div key={day} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-2xl transition-colors">
-                <div className="w-24 text-sm font-bold text-slate-600">{day}</div>
-                <input 
-                  type="number" 
-                  step="0.5" 
-                  disabled={holidays[i]} 
-                  value={formData[i]} 
-                  onChange={(e) => setFormData({...formData, [i]: e.target.value})} 
-                  className={`flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all ${holidays[i] ? 'opacity-30 bg-slate-100' : ''}`} 
-                />
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input type="checkbox" checked={holidays[i]} onChange={(e) => setHolidays({...holidays, [i]: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 cursor-pointer" />
-                  <span className="text-[10px] font-black text-slate-300 group-hover:text-blue-500 uppercase tracking-tighter transition-colors">Feiertag</span>
-                </label>
-              </div>
-            );
-          })}
-        </div>
-        <div className="p-6 bg-slate-50 flex gap-3">
-          <button onClick={onClose} className="flex-1 py-4 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-2xl transition-colors">Abbrechen</button>
-          <button onClick={handleSave} disabled={saving} className="flex-[2] bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white py-4 px-8 rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2">
-            {saving ? 'Wird gespeichert...' : <><Save size={18} /> Speichern</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- HAUPTKOMPONENTE ---
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(true); 
-  const [activeTab, setActiveTab] = useState('dashboard'); 
-  const [selectedDept, setSelectedDept] = useState('rohrleitungsbau');
-  const [view, setView] = useState('week'); 
-  const [currentWeek, setCurrentWeek] = useState(getWeekNumber(CURRENT_DATE)[1]);
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [archiveYear, setArchiveYear] = useState(2025);
-  
-  const [departments, setDepartments] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [hoursData, setHoursData] = useState([]);
-  
-  const [isEditModalOpen, setEditModalOpen] = useState(false);
-  const [activeEmployee, setActiveEmployee] = useState(null);
-  const [showPdfMenu, setShowPdfMenu] = useState(false);
-
-  // PDF Libs laden
-  useEffect(() => {
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js');
-  }, []);
-
-  // Auth
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          try {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } catch (e) { await signInAnonymously(auth); }
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (e) { console.error("Auth Error", e); }
-    };
-    initAuth();
-    return onAuthStateChanged(auth, (u) => { if (u) setUser(u); });
-  }, []);
-
-  // Fetch Departments
-  useEffect(() => {
-    if (!user) return;
-    return onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), (snap) => {
-      let depts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if (depts.length === 0) {
-        const initial = [
-          { id: 'rohrleitungsbau', name: 'Rohrleitungsbau', sortOrder: 1 },
-          { id: 'montage', name: 'Montage', sortOrder: 2 },
-          { id: 'werkstatt', name: 'Werkstatt', sortOrder: 3 },
-          { id: 'offerte', name: 'Offerte', sortOrder: 4 }
-        ];
-        initial.forEach(d => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', d.id), d));
-      }
-      setDepartments(depts.sort((a, b) => a.sortOrder - b.sortOrder));
-    });
-  }, [user]);
-
-  // Fetch Employees
-  useEffect(() => {
-    if (!user) return;
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), where('active', '==', true));
-    return onSnapshot(q, (snap) => {
-      setEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-  }, [user]);
-
-  // Fetch Hours
-  useEffect(() => {
-    if (!user) return;
-    const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
-    const collectionName = activeTab === 'archive' ? `archive_${effectiveYear}` : 'hours';
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', collectionName), where('year', '==', effectiveYear));
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PE-Fabrikation | Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    return onSnapshot(q, (snap) => {
-      setHoursData(snap.docs.map(doc => doc.data()));
-    });
-  }, [user, currentYear, archiveYear, activeTab]);
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-  const filteredEmployees = useMemo(() => 
-    employees.filter(e => e.department === selectedDept),
-  [employees, selectedDept]);
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  const stats = useMemo(() => {
-    const res = {};
-    const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
-    filteredEmployees.forEach(emp => {
-      const empHours = hoursData.filter(h => h.employeeId === emp.id);
-      let weekTotal = 0, monthTotal = 0, yearTotal = 0;
-      const days = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .sidebar-item-active { background: #4f46e5; color: white; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-      empHours.forEach(h => {
-        if (h.year === effectiveYear) {
-          yearTotal += h.hours;
-          if (h.week === currentWeek) {
-            weekTotal += h.hours;
-            days[h.weekday] = h.hours;
-          }
-          const hDate = new Date(h.date);
-          if (hDate.getMonth() === CURRENT_DATE.getMonth() && hDate.getFullYear() === currentYear) monthTotal += h.hours;
-        }
-      });
-      res[emp.id] = { weekTotal, monthTotal, yearTotal, days };
-    });
-    return res;
-  }, [filteredEmployees, hoursData, currentWeek, currentYear, archiveYear, activeTab]);
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
 
-  const copyToClipboard = () => {
-    let text = `KW${currentWeek} - ${currentYear}\n\n`;
-    filteredEmployees.forEach(emp => {
-      const s = stats[emp.id] || { weekTotal: 0, days: {} };
-      text += `${emp.name}\tKW${currentWeek}\t${s.weekTotal.toFixed(1).replace('.', ',')} h\n`;
-      text += `Mo ${formatNumber(s.days[1] || 0)}  Di ${formatNumber(s.days[2] || 0)}  Mi ${formatNumber(s.days[3] || 0)}  Do ${formatNumber(s.days[4] || 0)}  Fr ${formatNumber(s.days[5] || 0)}  Sa ${formatNumber(s.days[6] || 0)}  So ${formatNumber(s.days[7] || 0)}\n\n`;
-    });
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-  };
+        // Firebase Setup
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "", authDomain: "stunden-9ddd7.firebaseapp.com", projectId: "stunden-9ddd7"
+        };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : "stunden-9ddd7";
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
 
-  const handleExportPdf = (type) => {
-    if (!window.jspdf) return;
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const effectiveYear = activeTab === 'archive' ? archiveYear : currentYear;
-    let title = `PE-Stunden ${type.toUpperCase()} KW${currentWeek} - ${effectiveYear}`;
+        // Utils
+        const getWeek = (d) => {
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+            return Math.ceil((((date - new Date(Date.UTC(date.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+        };
 
-    doc.setFontSize(18);
-    doc.text(title, 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Erstellt: ${new Date().toLocaleDateString('de-DE')}`, 14, 28);
+        const LucideIcon = ({ name, size = 18, className = "" }) => {
+            const icons = {
+                FileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></>,
+                Settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>,
+                Archive: <><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></>,
+                Plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+                Trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
+                Layout: <><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></>,
+                Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
+                Alert: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
+                Calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>
+            };
+            return <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name]}</svg>;
+        };
 
-    let currentY = 40;
-    departments.forEach(dept => {
-      const deptEmps = employees.filter(e => e.department === dept.id);
-      if (deptEmps.length === 0) return;
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('dashboard');
+            const [selectedDept, setSelectedDept] = useState('');
+            const [currentWeek, setCurrentWeek] = useState(getWeek(new Date()));
+            const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+            const [showExportMenu, setShowExportMenu] = useState(false);
+            
+            const [depts, setDepts] = useState([]);
+            const [employees, setEmployees] = useState([]);
+            const [hours, setHours] = useState([]);
+            const [holidays, setHolidays] = useState([]);
 
-      doc.setFontSize(14);
-      doc.setTextColor(0, 102, 204);
-      doc.text(dept.name, 14, currentY);
-      currentY += 5;
+            const exportMenuRef = useRef(null);
 
-      const body = deptEmps.map(emp => {
-        const s = stats[emp.id] || { weekTotal: 0, monthTotal: 0, yearTotal: 0 };
-        const val = type === 'week' ? s.weekTotal : (type === 'month' ? s.monthTotal : s.yearTotal);
-        return [emp.name, `${val.toFixed(1).replace('.', ',')} h`];
-      });
+            // Close export menu on outside click
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+                        setShowExportMenu(false);
+                    }
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, []);
 
-      doc.autoTable({
-        startY: currentY,
-        head: [['Mitarbeiter', 'Stunden']],
-        body: body,
-        theme: 'striped',
-        margin: { left: 14 }
-      });
-      currentY = doc.lastAutoTable.finalY + 15;
-    });
-    doc.save(`${title}.pdf`);
-    setShowPdfMenu(false);
-  };
+            // Auth
+            useEffect(() => {
+                const init = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await auth.signInWithCustomToken(__initial_auth_token);
+                    } else {
+                        await auth.signInAnonymously();
+                    }
+                };
+                init();
+                return auth.onAuthStateChanged(setUser);
+            }, []);
 
-  return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col z-10 shadow-sm">
-        <div className="p-6 border-b border-slate-100">
-          <h1 className="text-xl font-bold text-blue-600 tracking-tight">PE-Fabrikation</h1>
-          <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">v1.2 Admin System</p>
-        </div>
-        
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all mb-6 ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-          >
-            <LayoutDashboard size={20} />
-            <span className="text-sm font-semibold">Dashboard</span>
-          </button>
-
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Abteilungen</div>
-          {departments.map(dept => (
-            <button
-              key={dept.id}
-              onClick={() => { setSelectedDept(dept.id); setActiveTab('dashboard'); }}
-              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${selectedDept === dept.id && activeTab === 'dashboard' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}
-            >
-              <Users size={18} />
-              <span className="text-sm">{dept.name}</span>
-            </button>
-          ))}
-
-          {isAdmin && (
-            <div className="pt-8">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">System</div>
-              <button 
-                onClick={() => setActiveTab('admin')}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all mb-1 ${activeTab === 'admin' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-              >
-                <Settings size={20} />
-                <span className="text-sm font-semibold">Verwaltung</span>
-              </button>
-              <button 
-                onClick={() => setActiveTab('archive')}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'archive' ? 'bg-amber-100 text-amber-800 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}
-              >
-                <Archive size={20} />
-                <span className="text-sm font-semibold">Archiv</span>
-              </button>
-            </div>
-          )}
-        </nav>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {activeTab === 'admin' ? (
-          <AdminManagement departments={departments} employees={employees} appId={appId} db={db} />
-        ) : (
-          <>
-            <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm">
-              <div className="flex items-center gap-6">
-                <div className="flex flex-col">
-                  {activeTab === 'archive' ? (
-                    <div className="flex items-center gap-3">
-                       <span className="text-2xl font-black text-amber-600">ARCHIV {archiveYear}</span>
-                       <select value={archiveYear} onChange={(e) => setArchiveYear(parseInt(e.target.value))} className="bg-slate-100 rounded-lg text-sm font-bold px-2 py-1 outline-none">
-                         {[2025, 2024, 2023].map(y => <option key={y} value={y}>{y}</option>)}
-                       </select>
-                    </div>
-                  ) : (
-                    <span className="text-2xl font-black text-slate-800 uppercase tracking-tighter">
-                      KW {currentWeek} <span className="text-slate-300 font-light mx-2">|</span> {currentYear}
-                    </span>
-                  )}
-                  <div className="flex gap-2 mt-1">
-                     <button onClick={() => setCurrentWeek(w => Math.max(1, w-1))} className="p-1 hover:bg-slate-100 rounded transition-colors"><ChevronLeft size={16}/></button>
-                     <button onClick={() => setCurrentWeek(w => Math.min(52, w+1))} className="p-1 hover:bg-slate-100 rounded transition-colors"><ChevronRight size={16}/></button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="bg-slate-100 p-1 rounded-xl flex gap-1">
-                  {['week', 'month', 'year'].map(v => (
-                    <button key={v} onClick={() => setView(v)} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-                      {v === 'week' ? 'Woche' : (v === 'month' ? 'Monat' : 'Jahr')}
-                    </button>
-                  ))}
-                </div>
+            // Data Fetch
+            useEffect(() => {
+                if (!user) return;
+                const unsub1 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('departments').onSnapshot(s => {
+                    const d = s.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                    setDepts(d);
+                    if (d.length && !selectedDept) setSelectedDept(d[0].id);
+                });
+                const unsub2 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('employees').where('active', '==', true).onSnapshot(s => setEmployees(s.docs.map(doc => ({id: doc.id, ...doc.data()}))));
+                const unsub3 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('hours').where('year', '==', currentYear).where('week', '==', currentWeek).onSnapshot(s => setHours(s.docs.map(doc => doc.data())), err => console.error(err));
+                const unsub4 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('holidays').where('year', '==', currentYear).where('week', '==', currentWeek).onSnapshot(s => setHolidays(s.docs.map(doc => doc.data())), err => console.error(err));
                 
-                <div className="w-[1px] h-6 bg-slate-200 mx-2"></div>
+                return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+            }, [user, currentWeek, currentYear, selectedDept]);
+
+            // PDF Generation
+            const generatePDF = async (type = 'week', deptId = selectedDept) => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const targetDept = depts.find(d => d.id === deptId);
+                const deptName = targetDept?.name || "Unbekannt";
+                const dateStr = type === 'week' ? `KW ${currentWeek} / ${currentYear}` : `${currentYear}`;
+
+                doc.setFontSize(22);
+                doc.setTextColor(40);
+                doc.text("Stundenabrechnung PE-Fabrikation", 14, 22);
                 
-                <div className="relative">
-                  <button onClick={() => setShowPdfMenu(!showPdfMenu)} className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 shadow-sm">
-                    <FileText size={16} /> Export <ChevronDown size={14} />
-                  </button>
-                  {showPdfMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1 overflow-hidden">
-                      <button onClick={() => handleExportPdf('week')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 font-medium">PDF Woche</button>
-                      <button onClick={() => handleExportPdf('month')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 font-medium">PDF Monat</button>
-                      <button onClick={() => handleExportPdf('year')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 font-medium">PDF Jahr</button>
-                    </div>
-                  )}
-                </div>
+                doc.setFontSize(12);
+                doc.text(`Abteilung: ${deptName}`, 14, 32);
+                doc.text(`Zeitraum: ${type.toUpperCase()} - ${dateStr}`, 14, 38);
+                doc.text(`Erstellt am: ${new Date().toLocaleDateString('de-DE')}`, 14, 44);
 
-                <button onClick={copyToClipboard} className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md transition-all active:scale-95">
-                  <Clipboard size={16} /> Kopieren
-                </button>
-              </div>
-            </header>
+                let reportData = [];
+                if (type === 'week') {
+                    const deptEmps = employees.filter(e => e.department === deptId);
+                    reportData = deptEmps.map(e => {
+                        const empHours = hours.filter(h => h.employeeId === e.id);
+                        const total = empHours.reduce((sum, h) => sum + (h.hours || 0), 0);
+                        return [e.name, total.toFixed(2) + " h"];
+                    });
+                } else if (type === 'year') {
+                    // Für Jahresbericht ziehen wir alle Stunden dieses Jahres
+                    const yearData = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('hours')
+                                    .where('year', '==', currentYear)
+                                    .where('departmentId', '==', deptId).get();
+                    
+                    const yearHours = yearData.docs.map(d => d.data());
+                    const deptEmps = employees.filter(e => e.department === deptId);
+                    
+                    reportData = deptEmps.map(e => {
+                        const total = yearHours.filter(h => h.employeeId === e.id).reduce((sum, h) => sum + (h.hours || 0), 0);
+                        return [e.name, total.toFixed(2) + " h"];
+                    });
+                }
 
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-4xl mx-auto space-y-4">
-                {filteredEmployees.map(emp => {
-                  const s = stats[emp.id] || { weekTotal: 0, monthTotal: 0, yearTotal: 0, days: {} };
-                  const displayTotal = view === 'month' ? s.monthTotal : (view === 'year' ? s.yearTotal : s.weekTotal);
-                  return (
-                    <div 
-                      key={emp.id}
-                      onClick={() => { if(activeTab !== 'archive') { setActiveEmployee(emp); setEditModalOpen(true); } }}
-                      className={`bg-white border border-slate-200 rounded-2xl p-6 shadow-sm transition-all ${activeTab === 'archive' ? 'opacity-90' : 'hover:shadow-md cursor-pointer group hover:border-blue-200 active:bg-slate-50'}`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <h3 className="text-2xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{emp.name}</h3>
-                          {view === 'week' && (
-                            <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
-                              {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((day, idx) => (
-                                <div key={day} className="flex flex-col items-center min-w-[42px]">
-                                  <span className="text-[9px] font-black text-slate-300 uppercase mb-1">{day}</span>
-                                  <span className={`text-sm font-bold ${s.days[idx+1] > 0 ? 'text-slate-800' : 'text-slate-100'}`}>{formatNumber(s.days[idx+1] || 0)}</span>
+                doc.autoTable({
+                    startY: 55,
+                    head: [['Mitarbeiter', 'Gesamtstunden']],
+                    body: reportData,
+                    theme: 'striped',
+                    headStyles: { fillColor: [79, 70, 229] }
+                });
+
+                doc.save(`Abrechnung_${deptName}_${type}_${dateStr}.pdf`);
+                setShowExportMenu(false);
+            };
+
+            const exportAllDeptsYearly = async () => {
+                for(const d of depts) {
+                    await generatePDF('year', d.id);
+                }
+            };
+
+            // Employee Save
+            const saveHours = async (empId, day, val) => {
+                const docId = `${currentYear}_${currentWeek}_${empId}_${day}`;
+                const employee = employees.find(e => e.id === empId);
+                if(!employee) return;
+                
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('hours').doc(docId).set({
+                    employeeId: empId,
+                    employeeName: employee.name,
+                    departmentId: employee.department,
+                    year: currentYear,
+                    week: currentWeek,
+                    weekday: day,
+                    hours: parseFloat(val) || 0
+                });
+            };
+
+            const toggleHoliday = async (day) => {
+                const docId = `${currentYear}_${currentWeek}_day_${day}`;
+                const existing = holidays.find(h => h.weekday === day);
+                if (existing) {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('holidays').doc(docId).delete();
+                } else {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('holidays').doc(docId).set({
+                        year: currentYear,
+                        week: currentWeek,
+                        weekday: day,
+                        isHoliday: true
+                    });
+                }
+            };
+
+            const filteredEmps = employees.filter(e => e.department === selectedDept);
+
+            return (
+                <div className="flex h-screen overflow-hidden text-slate-700">
+                    {/* Sidebar */}
+                    <nav className="w-72 bg-slate-900 text-white flex flex-col p-6 space-y-8 z-30 shadow-2xl">
+                        <div className="flex items-center space-x-3 px-2">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-xl text-white">PE</div>
+                            <h1 className="text-lg font-extrabold tracking-tight text-white">MANAGEMENT <span className="block text-indigo-400 text-[10px] tracking-widest uppercase">Fabrikation</span></h1>
+                        </div>
+
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-3 mb-2">Navigation</p>
+                            <button onClick={() => setView('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${view === 'dashboard' ? 'sidebar-item-active' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                <LucideIcon name="Layout" /> <span className="font-semibold text-sm">Dashboard</span>
+                            </button>
+                            <button onClick={() => setView('archive')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${view === 'archive' ? 'sidebar-item-active' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                <LucideIcon name="Archive" /> <span className="font-semibold text-sm">Archiv</span>
+                            </button>
+                            <button onClick={() => setView('admin')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${view === 'admin' ? 'sidebar-item-active' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                <LucideIcon name="Settings" /> <span className="font-semibold text-sm">Verwaltung</span>
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pt-4">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-3 mb-2">Abteilungen</p>
+                            {depts.map(d => (
+                                <button key={d.id} onClick={() => {setSelectedDept(d.id); setView('dashboard')}} className={`w-full text-left px-4 py-3 rounded-xl mb-1 transition-all text-sm font-medium ${selectedDept === d.id && view === 'dashboard' ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-600/20' : 'text-slate-400 hover:text-white'}`}>
+                                    {d.name}
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
+
+                    {/* Main Area */}
+                    <main className="flex-1 flex flex-col bg-slate-50 relative">
+                        {/* Header */}
+                        <header className="h-20 bg-white border-b border-slate-200 px-10 flex items-center justify-between">
+                            <div className="flex items-center space-x-6">
+                                <h2 className="text-xl font-bold text-slate-800 capitalize">{view === 'dashboard' ? 'Arbeitszeit-Erfassung' : view === 'admin' ? 'Verwaltung' : 'Archiv'}</h2>
+                                <div className="h-8 w-[1px] bg-slate-200"></div>
+                                <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                                    <button onClick={() => setCurrentWeek(w => Math.max(1, w-1))} className="p-1.5 hover:bg-white rounded-md transition-all text-slate-500"><LucideIcon name="Plus" size={16} className="rotate-45"/></button>
+                                    <span className="px-4 font-bold text-sm text-slate-600">KW {currentWeek}</span>
+                                    <button onClick={() => setCurrentWeek(w => Math.min(52, w+1))} className="p-1.5 hover:bg-white rounded-md transition-all text-slate-500"><LucideIcon name="Plus" size={16} /></button>
                                 </div>
-                              ))}
                             </div>
-                          )}
-                        </div>
-                        <div className="text-right ml-8">
-                          <div className="text-5xl font-black text-slate-900 tracking-tighter">
-                            {displayTotal.toFixed(1).replace('.', ',')}
-                            <span className="text-lg font-normal text-slate-300 ml-1">h</span>
-                          </div>
-                          <div className="text-[10px] font-black text-blue-500 uppercase mt-1 tracking-widest">
-                            Summe {view === 'month' ? 'Monat' : (view === 'year' ? 'Jahr' : 'Woche')}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
-      </main>
+                            
+                            <div className="flex items-center space-x-3">
+                                {view === 'dashboard' && (
+                                    <div className="relative" ref={exportMenuRef}>
+                                        <button 
+                                            onClick={() => setShowExportMenu(!showExportMenu)}
+                                            className="flex items-center space-x-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+                                        >
+                                            <LucideIcon name="Download" size={16}/> <span>Bericht erstellen</span>
+                                        </button>
+                                        {showExportMenu && (
+                                            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 p-2 animate-in fade-in zoom-in-95 duration-150">
+                                                <div className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Exportieren für {depts.find(d => d.id === selectedDept)?.name}</div>
+                                                <button onClick={() => generatePDF('week')} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700">Wochenbericht (KW {currentWeek})</button>
+                                                <button onClick={() => generatePDF('year')} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700">Jahresbericht ({currentYear})</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-white overflow-hidden">
+                                    <img src={`https://ui-avatars.com/api/?name=Admin&background=random`} alt="User" />
+                                </div>
+                            </div>
+                        </header>
 
-      {/* Modal */}
-      {isEditModalOpen && activeEmployee && (
-        <EditModal 
-          employee={activeEmployee} 
-          week={currentWeek} 
-          year={currentYear}
-          initialData={stats[activeEmployee.id]?.days}
-          onClose={() => setEditModalOpen(false)}
-          appId={appId}
-          db={db}
-          user={user}
-        />
-      )}
-    </div>
-  );
-}
+                        {/* Content Scrollable */}
+                        <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+                            {view === 'dashboard' && (
+                                <div className="max-w-6xl mx-auto space-y-6">
+                                    {/* Holiday Selector Bar */}
+                                    <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between mb-2">
+                                        <div className="flex items-center space-x-3 text-slate-500 font-bold text-xs uppercase tracking-widest">
+                                            <LucideIcon name="Calendar" className="text-indigo-600" />
+                                            <span>Feiertage in KW {currentWeek} markieren:</span>
+                                        </div>
+                                        <div className="flex space-x-2">
+                                            {[1,2,3,4,5,6,7].map(day => {
+                                                const isHoliday = holidays.find(h => h.weekday === day);
+                                                return (
+                                                    <button 
+                                                        key={day}
+                                                        onClick={() => toggleHoliday(day)}
+                                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${isHoliday ? 'bg-amber-100 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
+                                                    >
+                                                        {['Mo','Di','Mi','Do','Fr','Sa','So'][day-1]}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {filteredEmps.map(emp => {
+                                            const empHours = hours.filter(h => h.employeeId === emp.id);
+                                            const total = empHours.reduce((sum, h) => sum + (h.hours || 0), 0);
+                                            return (
+                                                <div key={emp.id} className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col md:flex-row items-center justify-between group hover:shadow-xl hover:shadow-slate-200/50 transition-all">
+                                                    <div className="flex items-center space-x-6 w-full md:w-1/3 mb-4 md:mb-0">
+                                                        <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center font-bold text-indigo-600 text-lg">
+                                                            {emp.name.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-bold text-slate-800 leading-tight">{emp.name}</h4>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mitarbeiter-ID: {emp.id.substring(0,6)}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex-1 flex justify-center space-x-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                                                        {[1,2,3,4,5,6,7].map(day => {
+                                                            const h = empHours.find(r => r.weekday === day)?.hours || 0;
+                                                            const isHoliday = holidays.find(hol => hol.weekday === day);
+                                                            const hasWarning = isHoliday && h > 0;
+                                                            return (
+                                                                <div key={day} className="flex flex-col items-center min-w-[50px]">
+                                                                    <span className={`text-[9px] font-bold uppercase mb-1 ${isHoliday ? 'text-amber-600' : 'text-slate-300'}`}>
+                                                                        {['Mo','Di','Mi','Do','Fr','Sa','So'][day-1]}
+                                                                    </span>
+                                                                    <div className="relative">
+                                                                        <input 
+                                                                            type="number" 
+                                                                            step="0.25"
+                                                                            value={h || ''} 
+                                                                            placeholder="0"
+                                                                            onChange={(e) => saveHours(emp.id, day, e.target.value)}
+                                                                            className={`w-12 h-10 text-center rounded-lg text-sm font-bold border-2 transition-all outline-none ${h > 0 ? (isHoliday ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-indigo-50 border-indigo-200 text-indigo-700') : 'bg-slate-50 border-slate-100 text-slate-400 focus:bg-white focus:border-indigo-300'}`}
+                                                                        />
+                                                                        {hasWarning && (
+                                                                            <div className="absolute -top-1 -right-1 bg-amber-500 text-white p-0.5 rounded-full ring-2 ring-white">
+                                                                                <LucideIcon name="Alert" size={8} />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    {hasWarning && <span className="text-[7px] text-amber-600 font-bold mt-1 text-center leading-[1]">Feiertag!</span>}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    <div className="w-full md:w-48 flex flex-col items-end mt-4 md:mt-0">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Stunden</span>
+                                                        <div className="text-3xl font-black text-indigo-600 tracking-tighter">
+                                                            {total.toFixed(1).replace('.', ',')} <span className="text-sm font-bold text-slate-300">h</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {filteredEmps.length === 0 && (
+                                            <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                                                <LucideIcon name="FileText" size={40} className="mx-auto text-slate-300 mb-4" />
+                                                <p className="text-slate-400 font-medium">Keine Mitarbeiter in dieser Abteilung.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {view === 'admin' && (
+                                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    {/* Personal */}
+                                    <div className="bg-white rounded-3xl border border-slate-200 p-8 space-y-6 shadow-sm">
+                                        <h3 className="text-lg font-bold flex items-center gap-2"><LucideIcon name="FileText" className="text-indigo-600"/> Personal-Stamm</h3>
+                                        <form onSubmit={async (e) => {
+                                            e.preventDefault();
+                                            const name = e.target.name.value;
+                                            const dept = e.target.dept.value;
+                                            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('employees').add({
+                                                name, department: dept, active: true
+                                            });
+                                            e.target.reset();
+                                        }} className="space-y-3">
+                                            <input name="name" placeholder="Name, Vorname" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 ring-indigo-500/20" required/>
+                                            <select name="dept" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none" required>
+                                                {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                            </select>
+                                            <button className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm">Hinzufügen</button>
+                                        </form>
+                                        <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                            {employees.map(e => (
+                                                <div key={e.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl text-sm border border-slate-100">
+                                                    <span className="font-bold">{e.name}</span>
+                                                    <button onClick={() => db.collection('artifacts').doc(appId).collection('public').doc('data').collection('employees').doc(e.id).update({active: false})} className="text-slate-300 hover:text-red-500"><LucideIcon name="Trash" size={16}/></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Abteilungen */}
+                                    <div className="bg-white rounded-3xl border border-slate-200 p-8 space-y-6 shadow-sm">
+                                        <h3 className="text-lg font-bold flex items-center gap-2"><LucideIcon name="Layout" className="text-indigo-600"/> Strukturen</h3>
+                                        <form onSubmit={async (e) => {
+                                            e.preventDefault();
+                                            const name = e.target.deptName.value;
+                                            const id = name.toLowerCase().replace(/\s/g, '-');
+                                            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('departments').doc(id).set({ name });
+                                            e.target.reset();
+                                        }} className="space-y-3">
+                                            <input name="deptName" placeholder="Abteilungsname" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 ring-indigo-500/20" required/>
+                                            <button className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm">Bereich erstellen</button>
+                                        </form>
+                                        <div className="space-y-2">
+                                            {depts.map(d => (
+                                                <div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl text-sm border border-slate-100">
+                                                    <span className="font-bold">{d.name}</span>
+                                                    <button onClick={() => db.collection('artifacts').doc(appId).collection('public').doc('data').collection('departments').doc(d.id).delete()} className="text-slate-300 hover:text-red-500"><LucideIcon name="Trash" size={16}/></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {view === 'archive' && (
+                                <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+                                    <div className="bg-indigo-900 rounded-[2rem] p-10 text-white relative overflow-hidden shadow-2xl">
+                                        <div className="relative z-10 flex justify-between items-center">
+                                            <div>
+                                                <h3 className="text-3xl font-black mb-2 tracking-tight">DATEN-ARCHIV</h3>
+                                                <p className="text-indigo-300 text-sm font-medium">Durchsuchen Sie historische Abrechnungen und exportieren Sie Berichte.</p>
+                                            </div>
+                                            <button 
+                                                onClick={exportAllDeptsYearly}
+                                                className="bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-xl flex items-center gap-2 transition-all"
+                                            >
+                                                <LucideIcon name="Download" /> Alle Abteilungen ({currentYear})
+                                            </button>
+                                        </div>
+                                        <LucideIcon name="Archive" size={120} className="absolute -right-8 -bottom-8 text-indigo-800 opacity-50 rotate-12" />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                                            <div>
+                                                <h4 className="font-bold text-slate-800 mb-4">Zeitraum wählen</h4>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Jahr</label>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {[2024, 2025, 2026, 2027].map(y => (
+                                                                <button 
+                                                                    key={y}
+                                                                    onClick={() => setCurrentYear(y)}
+                                                                    className={`py-2 rounded-xl text-xs font-bold border transition-all ${currentYear === y ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'}`}
+                                                                >
+                                                                    {y}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Kalenderwoche</label>
+                                                        <select value={currentWeek} onChange={(e) => setCurrentWeek(parseInt(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-indigo-500/10">
+                                                            {[...Array(52)].map((_, i) => <option key={i+1} value={i+1}>KW {i+1}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="mt-8 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1 italic">Tipp</p>
+                                                <p className="text-[11px] text-indigo-700 leading-relaxed">Klicken Sie oben auf das Jahr oder unten auf eine Abteilung, um die entsprechenden Daten im Dashboard einzusehen oder Berichte zu ziehen.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="md:col-span-2 bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                                            <table className="w-full text-left">
+                                                <thead className="bg-slate-50 border-b border-slate-200">
+                                                    <tr>
+                                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Abteilung</th>
+                                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Personal</th>
+                                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Wochen-Total</th>
+                                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aktion</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {depts.map(d => {
+                                                        const deptEmps = employees.filter(e => e.department === d.id);
+                                                        const deptHours = hours.filter(h => h.departmentId === d.id);
+                                                        const sum = deptHours.reduce((acc, h) => acc + (h.hours || 0), 0);
+                                                        return (
+                                                            <tr key={d.id} className="hover:bg-slate-50/50 transition-all group">
+                                                                <td className="px-6 py-4 font-bold text-sm">{d.name}</td>
+                                                                <td className="px-6 py-4 text-xs font-medium text-slate-500">{deptEmps.length} Pers.</td>
+                                                                <td className="px-6 py-4 font-black text-indigo-600">{sum.toFixed(1)} h</td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex space-x-2">
+                                                                        <button 
+                                                                            onClick={() => {setSelectedDept(d.id); setView('dashboard')}}
+                                                                            className="p-2 bg-slate-100 text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"
+                                                                            title="Anzeigen"
+                                                                        >
+                                                                            <LucideIcon name="Layout" size={14}/>
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => generatePDF('year', d.id)}
+                                                                            className="p-2 bg-slate-100 text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"
+                                                                            title="Jahres-PDF"
+                                                                        >
+                                                                            <LucideIcon name="Download" size={14}/>
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

@@ -1,441 +1,384 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Users, Archive as ArchiveIcon, Calendar, ChevronLeft, ChevronRight, 
-  LayoutDashboard, Settings, Trash2, Download, History, 
-  FileText, CheckCircle, Database, Loader2, Plus, X, Sun
-} from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, signInAnonymously, onAuthStateChanged 
-} from 'firebase/auth';
-import { 
-  getFirestore, collection, doc, setDoc, getDoc, onSnapshot, 
-  deleteDoc, addDoc, query, where 
-} from 'firebase/firestore';
-
-// --- Firebase Konfiguration ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAed2CEj7_qC4vYnlM2o5u1rtJOGy7EPTc",
-  authDomain: "stundendani.firebaseapp.com",
-  databaseURL: "https://stundendani-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "stundendani",
-  storageBucket: "stundendani.firebasestorage.app",
-  messagingSenderId: "658690155661",
-  appId: "1:658690155661:web:9a4c60bcaa5ba412752ec4"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'stundendani-main';
-
-const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-const YEARS = [2024, 2025, 2026, 2027];
-
-// --- Hilfskomponenten ---
-
-const DashboardView = ({ 
-  currentWeek, setCurrentWeek, currentYear, setCurrentYear, 
-  departments, selectedDept, setSelectedDept, 
-  holidays, toggleHoliday, filteredEmployees, hoursData, handleHourChange, calculateTotal 
-}) => (
-  <div className="space-y-6">
-    {/* Navigation & Filter */}
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-      <div className="flex items-center gap-4">
-        <button 
-          onClick={() => {
-            if (currentWeek > 1) setCurrentWeek(prev => prev - 1);
-            else { setCurrentYear(y => y - 1); setCurrentWeek(52); }
-          }}
-          className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-slate-600" />
-        </button>
-        <div className="text-center min-w-[100px]">
-          <h2 className="text-xl font-black italic text-slate-900 uppercase">KW {currentWeek}</h2>
-          <p className="text-xs font-bold text-slate-500 uppercase">{currentYear}</p>
-        </div>
-        <button 
-          onClick={() => {
-            if (currentWeek < 52) setCurrentWeek(prev => prev + 1);
-            else { setCurrentYear(y => y + 1); setCurrentWeek(1); }
-          }}
-          className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-        >
-          <ChevronRight className="w-6 h-6 text-slate-600" />
-        </button>
-      </div>
-
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-        <button 
-          onClick={() => setSelectedDept('all')}
-          className={`px-5 py-2 rounded-full font-bold text-xs transition-all whitespace-nowrap ${selectedDept === 'all' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-        >
-          Alle
-        </button>
-        {departments.map(dept => (
-          <button 
-            key={dept.id}
-            onClick={() => setSelectedDept(dept.id)}
-            className={`px-5 py-2 rounded-full font-bold text-xs transition-all whitespace-nowrap ${selectedDept === dept.id ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-          >
-            {dept.name}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* Feiertage Buttons */}
-    <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
-      {WEEKDAYS.map(day => (
-        <button
-          key={day}
-          onClick={() => toggleHoliday(day)}
-          className={`py-3 rounded-2xl text-[10px] font-black uppercase flex flex-col items-center gap-1 transition-all border-2 ${holidays[day] ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-transparent text-slate-400 hover:border-slate-200'}`}
-        >
-          <Sun className={`w-3 h-3 ${holidays[day] ? 'fill-blue-500' : ''}`} />
-          {day.substring(0, 2)}
-        </button>
-      ))}
-    </div>
-
-    {/* Haupttabelle */}
-    <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-100">
-              <th className="p-6 text-[10px] font-black uppercase text-slate-500 tracking-widest w-48">Mitarbeiter</th>
-              {WEEKDAYS.map(day => (
-                <th key={day} className="p-2 text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">
-                  {day.substring(0, 2)}
-                </th>
-              ))}
-              <th className="p-6 text-[10px] font-black uppercase text-blue-600 tracking-widest text-right">Summe</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredEmployees.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="p-16 text-center text-slate-400 font-bold italic">Keine Mitarbeiter in dieser Auswahl.</td>
-              </tr>
-            ) : (
-              filteredEmployees.map(emp => (
-                <tr key={emp.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                  <td className="p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black text-xs">
-                        {emp.name.charAt(0)}
-                      </div>
-                      <span className="font-bold text-slate-800 text-sm whitespace-nowrap">{emp.name}</span>
-                    </div>
-                  </td>
-                  {WEEKDAYS.map(day => (
-                    <td key={day} className={`p-2 text-center ${holidays[day] ? 'bg-blue-50/30' : ''}`}>
-                      <input 
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0.0"
-                        value={hoursData[`${emp.id}_${day}`] || ''}
-                        onChange={(e) => handleHourChange(emp.id, day, e.target.value)}
-                        className={`w-12 h-10 text-center font-black text-sm rounded-xl border-2 transition-all outline-none ${
-                          holidays[day] ? 'border-blue-200 text-blue-600' : 'border-slate-100 bg-slate-50 focus:border-blue-400'
-                        }`}
-                      />
-                    </td>
-                  ))}
-                  <td className="p-6 text-right">
-                    <div className="inline-block px-4 py-2 bg-slate-900 text-white rounded-full font-black text-xs">
-                      {calculateTotal(emp.id)}h
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-);
-
-const ArchiveView = ({ isExporting, setIsExporting }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-    {YEARS.map(year => (
-      <div key={year} className="bg-white p-6 rounded-[2rem] border border-slate-200 flex flex-col items-center text-center space-y-4 hover:shadow-lg transition-all">
-        <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-          <Calendar className="w-6 h-6 text-slate-400" />
-        </div>
-        <h3 className="text-2xl font-black italic tracking-tighter text-slate-900">{year}</h3>
-        <button 
-          onClick={() => {
-            setIsExporting(true);
-            setTimeout(() => setIsExporting(false), 2000);
-          }}
-          className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-3 rounded-2xl font-bold text-sm"
-        >
-          {isExporting ? <CheckCircle className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-          Export
-        </button>
-      </div>
-    ))}
-  </div>
-);
-
-const AdminView = ({ 
-  departments, employees, user, appId, db, deleteItem 
-}) => {
-  const [newDept, setNewDept] = useState('');
-  const [newEmpName, setNewEmpName] = useState('');
-  const [newEmpDept, setNewEmpDept] = useState('');
-
-  const addDepartment = async () => {
-    if (!newDept || !user) return;
-    const id = Date.now().toString();
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'departments', id), { name: newDept });
-    setNewDept('');
-  };
-
-  const addEmployee = async () => {
-    if (!newEmpName || !newEmpDept || !user) return;
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), {
-      name: newEmpName,
-      department: newEmpDept
-    });
-    setNewEmpName('');
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200">
-        <h3 className="text-lg font-black italic text-slate-900 uppercase mb-6">Abteilungen</h3>
-        <div className="flex gap-2 mb-6">
-          <input 
-            className="flex-1 bg-slate-100 rounded-full px-5 py-3 font-bold text-sm outline-none"
-            placeholder="Abteilungsname..."
-            value={newDept}
-            onChange={(e) => setNewDept(e.target.value)}
-          />
-          <button onClick={addDepartment} className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors">
-            <Plus className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="space-y-2">
-          {departments.map(dept => (
-            <div key={dept.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
-              <span className="font-bold text-slate-700 text-sm">{dept.name}</span>
-              <button onClick={() => deleteItem('departments', dept.id)} className="p-2 text-slate-300 hover:text-red-500">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200">
-        <h3 className="text-lg font-black italic text-slate-900 uppercase mb-6">Personal</h3>
-        <div className="space-y-3 mb-6">
-          <input 
-            className="w-full bg-slate-100 rounded-full px-5 py-3 font-bold text-sm outline-none"
-            placeholder="Name..."
-            value={newEmpName}
-            onChange={(e) => setNewEmpName(e.target.value)}
-          />
-          <div className="flex gap-2">
-            <select 
-              className="flex-1 bg-slate-100 rounded-full px-5 py-3 font-bold text-sm outline-none appearance-none"
-              value={newEmpDept}
-              onChange={(e) => setNewEmpDept(e.target.value)}
-            >
-              <option value="">Abteilung wählen...</option>
-              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-            <button onClick={addEmployee} className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700">
-              <Plus className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-        <div className="space-y-2">
-          {employees.map(emp => (
-            <div key={emp.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
-              <div>
-                <div className="font-bold text-slate-700 text-sm">{emp.name}</div>
-                <div className="text-[9px] font-black uppercase text-slate-400">
-                  {departments.find(d => d.id === emp.department)?.name || 'Keine Abteilung'}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-Exact Zeiterfassung</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900">
+    <div id="app" class="min-h-screen flex flex-col lg:flex-row">
+        <!-- Sidebar -->
+        <aside class="hidden lg:flex flex-col w-72 bg-[#0f172a] text-white p-8 fixed h-full z-20">
+            <div class="mb-12 flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center">
+                    <i data-lucide="database" class="w-6 h-6"></i>
                 </div>
-              </div>
-              <button onClick={() => deleteItem('employees', emp.id)} className="p-2 text-slate-300 hover:text-red-500">
-                <Trash2 className="w-4 h-4" />
-              </button>
+                <div>
+                    <h1 class="text-xl font-black italic uppercase leading-none">Pro-Exact</h1>
+                    <span class="text-[10px] text-blue-500 tracking-[0.2em] font-bold uppercase">Cloud System</span>
+                </div>
             </div>
-          ))}
-        </div>
-      </div>
+            
+            <nav class="flex-1 space-y-2">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all bg-blue-600 shadow-lg text-white">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+                </button>
+                <button onclick="switchTab('archive')" id="nav-archive" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-slate-400 hover:text-white">
+                    <i data-lucide="archive" class="w-5 h-5"></i> Archiv
+                </button>
+                <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-slate-400 hover:text-white">
+                    <i data-lucide="settings" class="w-5 h-5"></i> Verwaltung
+                </button>
+            </nav>
+
+            <div class="mt-auto pt-6 border-t border-slate-800">
+                <p id="user-display" class="text-[9px] text-slate-500 font-black uppercase tracking-widest truncate">Verbinde...</p>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="flex-1 lg:ml-72 p-6 md:p-10">
+            <!-- Mobile Nav -->
+            <div class="lg:hidden flex justify-around mb-8 bg-[#0f172a] p-4 rounded-2xl text-white shadow-xl">
+                <button onclick="switchTab('dashboard')"><i data-lucide="layout-dashboard"></i></button>
+                <button onclick="switchTab('archive')"><i data-lucide="archive"></i></button>
+                <button onclick="switchTab('admin')"><i data-lucide="settings"></i></button>
+            </div>
+
+            <div class="max-w-7xl mx-auto" id="content-area">
+                <!-- Content will be injected here -->
+                <div class="flex flex-col items-center justify-center h-64 gap-4">
+                    <i data-lucide="loader-2" class="w-10 h-10 text-blue-500 animate-spin"></i>
+                    <p class="text-sm font-bold text-slate-400 animate-pulse">Initialisiere Cloud-Synchronisierung...</p>
+                </div>
+            </div>
+        </main>
     </div>
-  );
-};
 
-// --- Haupt App ---
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  
-  const [departments, setDepartments] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [hoursData, setHoursData] = useState({}); 
-  const [holidays, setHolidays] = useState({}); 
-  
-  const [selectedDept, setSelectedDept] = useState('all');
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [currentWeek, setCurrentWeek] = useState(getWeekNumber(new Date()));
-  const [isExporting, setIsExporting] = useState(false);
+        // Firebase Setup
+        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = window.__app_id || 'stundendani-main';
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (err) {
-        console.error("Firebase Login fehlgeschlagen:", err);
-      } finally {
-        setAuthLoading(false);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
+        let state = {
+            user: null,
+            activeTab: 'dashboard',
+            departments: [],
+            employees: [],
+            hours: {},
+            holidays: {},
+            currentWeek: getWeekNumber(new Date()),
+            currentYear: new Date().getFullYear(),
+            selectedDept: 'all'
+        };
 
-  useEffect(() => {
-    if (!user) return;
+        // --- Core Functions ---
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+        }
 
-    const unsubDepts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), (snap) => {
-      setDepartments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => console.error("Firestore Error Depts:", err));
+        window.switchTab = (tab) => {
+            state.activeTab = tab;
+            updateUI();
+        };
 
-    const unsubEmps = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), (snap) => {
-      setEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => console.error("Firestore Error Emps:", err));
+        // --- Firebase Auth & Sync ---
+        async function init() {
+            try {
+                // Regel 3: Auth VOR Firestore
+                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                    await signInWithCustomToken(auth, window.__initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                onAuthStateChanged(auth, (user) => {
+                    state.user = user;
+                    if (user) {
+                        document.getElementById('user-display').innerText = `ID: ${user.uid}`;
+                        setupListeners(); // Listener erst starten, wenn User da ist
+                    } else {
+                        document.getElementById('user-display').innerText = `Nicht angemeldet`;
+                    }
+                });
+            } catch (err) {
+                console.error("Auth Error:", err);
+                document.getElementById('content-area').innerHTML = `
+                    <div class="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-200">
+                        <h3 class="font-bold uppercase mb-2">Verbindungsfehler</h3>
+                        <p class="text-sm">Die Cloud-Verbindung konnte nicht hergestellt werden. Bitte prüfen Sie Ihre Firebase-Einstellungen.</p>
+                    </div>
+                `;
+            }
+        }
 
-    const unsubHols = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'holidays'), (snap) => {
-      const hols = {};
-      snap.docs.forEach(doc => {
-        const d = doc.data();
-        if (d.year === currentYear && d.week === currentWeek) hols[d.weekday] = d.isHoliday;
-      });
-      setHolidays(hols);
-    });
+        function setupListeners() {
+            if (!state.user) return;
 
-    const unsubHours = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'hours'), (snap) => {
-      const data = {};
-      snap.docs.forEach(doc => {
-        const d = doc.data();
-        if (d.year === currentYear && d.week === currentWeek) data[`${d.employeeId}_${d.weekday}`] = d.hours;
-      });
-      setHoursData(data);
-    });
+            // Regel 1: Verwendung der korrekten Pfadstruktur
+            const deptsRef = collection(db, 'artifacts', appId, 'public', 'data', 'departments');
+            const empsRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
+            const holsRef = collection(db, 'artifacts', appId, 'public', 'data', 'holidays');
+            const hoursRef = collection(db, 'artifacts', appId, 'public', 'data', 'hours');
 
-    return () => { unsubDepts(); unsubEmps(); unsubHols(); unsubHours(); };
-  }, [user, currentYear, currentWeek]);
+            // Error-Callbacks für onSnapshot sind zwingend erforderlich
+            onSnapshot(deptsRef, (snap) => {
+                state.departments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                updateUI();
+            }, (err) => console.error("Snapshot Error Depts:", err));
 
-  function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
-  }
+            onSnapshot(empsRef, (snap) => {
+                state.employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                updateUI();
+            }, (err) => console.error("Snapshot Error Emps:", err));
 
-  const handleHourChange = async (empId, weekday, val) => {
-    if (!user) return;
-    const hoursNum = parseFloat(val.replace(',', '.')) || 0;
-    const docId = `h_${currentYear}_${currentWeek}_${empId}_${weekday}`;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId), {
-      employeeId: empId, year: currentYear, week: currentWeek, weekday, hours: hoursNum
-    });
-  };
+            onSnapshot(holsRef, (snap) => {
+                state.holidays = {};
+                snap.docs.forEach(d => {
+                    const data = d.data();
+                    if (data.year === state.currentYear && data.week === state.currentWeek) {
+                        state.holidays[data.weekday] = data.isHoliday;
+                    }
+                });
+                updateUI();
+            }, (err) => console.error("Snapshot Error Holidays:", err));
 
-  const toggleHoliday = async (weekday) => {
-    if (!user) return;
-    const docId = `hol_${currentYear}_${currentWeek}_${weekday}`;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'holidays', docId), {
-      year: currentYear, week: currentWeek, weekday, isHoliday: !holidays[weekday]
-    });
-  };
+            onSnapshot(hoursRef, (snap) => {
+                state.hours = {};
+                snap.docs.forEach(d => {
+                    const data = d.data();
+                    if (data.year === state.currentYear && data.week === state.currentWeek) {
+                        state.hours[`${data.employeeId}_${data.weekday}`] = data.hours;
+                    }
+                });
+                updateUI();
+            }, (err) => console.error("Snapshot Error Hours:", err));
+        }
 
-  const deleteItem = async (col, id) => {
-    if (!user) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
-  };
+        // --- UI Rendering ---
+        function updateUI() {
+            const container = document.getElementById('content-area');
+            if (!container) return;
+            
+            // Sidebar Update
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'shadow-lg', 'text-white');
+                btn.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById(`nav-${state.activeTab}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-blue-600', 'shadow-lg', 'text-white');
+                activeBtn.classList.remove('text-slate-400');
+            }
 
-  const filteredEmployees = employees.filter(emp => selectedDept === 'all' || emp.department === selectedDept);
-  const calculateTotal = (empId) => WEEKDAYS.reduce((sum, day) => sum + (hoursData[`${empId}_${day}`] || 0), 0).toFixed(2);
+            if (state.activeTab === 'dashboard') {
+                renderDashboard(container);
+            } else if (state.activeTab === 'admin') {
+                renderAdmin(container);
+            } else if (state.activeTab === 'archive') {
+                renderArchive(container);
+            }
+            
+            lucide.createIcons();
+        }
 
-  if (authLoading) return (
-    <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center text-white p-6">
-      <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-      <p className="font-bold italic uppercase tracking-widest text-xs animate-pulse">Lade System...</p>
-    </div>
-  );
+        function renderDashboard(el) {
+            const weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+            const filteredEmps = state.employees.filter(e => state.selectedDept === 'all' || e.department === state.selectedDept);
 
-  return (
-    <div className="flex min-h-screen bg-slate-100 text-slate-900 font-sans">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-72 bg-[#0f172a] text-white p-8 fixed h-full z-20">
-        <div className="mb-12 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center">
-            <Database className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-xl font-black italic tracking-tighter uppercase leading-none">Pro-Exact<br/><span className="text-[10px] text-blue-500 tracking-[0.2em] not-italic">Cloud System</span></h1>
-        </div>
-        
-        <nav className="flex-1 space-y-2">
-          <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all ${activeTab === 'dashboard' ? 'bg-blue-600 shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-            <LayoutDashboard className="w-5 h-5" /> Dashboard
-          </button>
-          <button onClick={() => setActiveTab('archive')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all ${activeTab === 'archive' ? 'bg-blue-600 shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-            <ArchiveIcon className="w-5 h-5" /> Archiv
-          </button>
-          <button onClick={() => setActiveTab('admin')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all ${activeTab === 'admin' ? 'bg-blue-600 shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-            <Settings className="w-5 h-5" /> Verwaltung
-          </button>
-        </nav>
+            el.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200">
+                        <div class="flex items-center gap-4">
+                            <button onclick="changeWeek(-1)" class="p-2 hover:bg-slate-100 rounded-full"><i data-lucide="chevron-left"></i></button>
+                            <div class="text-center min-w-[100px]">
+                                <h2 class="text-xl font-black italic uppercase">KW ${state.currentWeek}</h2>
+                                <p class="text-xs font-bold text-slate-500 uppercase">${state.currentYear}</p>
+                            </div>
+                            <button onclick="changeWeek(1)" class="p-2 hover:bg-slate-100 rounded-full"><i data-lucide="chevron-right"></i></button>
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                            <button onclick="setDeptFilter('all')" class="px-5 py-2 rounded-full font-bold text-xs whitespace-nowrap ${state.selectedDept === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}">Alle</button>
+                            ${state.departments.map(d => `
+                                <button onclick="setDeptFilter('${d.id}')" class="px-5 py-2 rounded-full font-bold text-xs whitespace-nowrap ${state.selectedDept === d.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}">${d.name}</button>
+                            `).join('')}
+                        </div>
+                    </div>
 
-        <div className="mt-auto pt-6 border-t border-slate-800">
-          <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest truncate">User ID: {user?.uid}</p>
-        </div>
-      </aside>
+                    <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <tr class="bg-slate-50 border-b">
+                                    <th class="p-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Mitarbeiter</th>
+                                    ${weekdays.map(d => `<th class="p-2 text-[10px] font-black uppercase text-slate-500 text-center">${d.substring(0,2)}</th>`).join('')}
+                                    <th class="p-6 text-[10px] font-black uppercase text-blue-600 text-right tracking-widest">Summe</th>
+                                </tr>
+                                ${filteredEmps.length === 0 ? `<tr><td colspan="9" class="p-10 text-center text-slate-400 font-bold italic">Kein Personal gefunden.</td></tr>` : 
+                                filteredEmps.map(emp => {
+                                    let total = 0;
+                                    weekdays.forEach(d => total += (state.hours[`${emp.id}_${d}`] || 0));
+                                    return `
+                                    <tr class="border-b hover:bg-slate-50/50">
+                                        <td class="p-6">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black text-xs">${emp.name.charAt(0)}</div>
+                                                <span class="font-bold text-sm text-slate-800">${emp.name}</span>
+                                            </div>
+                                        </td>
+                                        ${weekdays.map(d => `
+                                            <td class="p-2 text-center">
+                                                <input type="text" value="${state.hours[`${emp.id}_${d}`] || ''}" 
+                                                    onchange="saveHours('${emp.id}', '${d}', this.value)"
+                                                    placeholder="0"
+                                                    class="w-12 h-10 text-center font-black text-sm rounded-xl border-2 border-slate-100 bg-slate-50 focus:border-blue-400 outline-none transition-all">
+                                            </td>
+                                        `).join('')}
+                                        <td class="p-6 text-right">
+                                            <span class="px-3 py-1 bg-slate-900 text-white rounded-full font-black text-xs">${total.toFixed(2)}h</span>
+                                        </td>
+                                    </tr>
+                                    `;
+                                }).join('')}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
-      {/* Main Content */}
-      <main className="flex-1 lg:ml-72 p-6 md:p-10">
-        {/* Mobile Nav */}
-        <div className="lg:hidden flex justify-around mb-8 bg-[#0f172a] p-4 rounded-2xl text-white shadow-xl">
-           <button onClick={() => setActiveTab('dashboard')} className={activeTab === 'dashboard' ? 'text-blue-500' : 'text-slate-400'}><LayoutDashboard /></button>
-           <button onClick={() => setActiveTab('archive')} className={activeTab === 'archive' ? 'text-blue-500' : 'text-slate-400'}><ArchiveIcon /></button>
-           <button onClick={() => setActiveTab('admin')} className={activeTab === 'admin' ? 'text-blue-500' : 'text-slate-400'}><Settings /></button>
-        </div>
+        function renderAdmin(el) {
+            el.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200">
+                        <h3 class="text-lg font-black italic text-slate-900 uppercase mb-6">Abteilungen</h3>
+                        <div class="flex gap-2 mb-6">
+                            <input id="new-dept-input" class="flex-1 bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none" placeholder="Abteilungsname...">
+                            <button onclick="addDept()" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors"><i data-lucide="plus"></i></button>
+                        </div>
+                        <div class="space-y-2">
+                            ${state.departments.map(d => `
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                                    <span class="font-bold text-sm text-slate-700">${d.name}</span>
+                                    <button onclick="deleteDocItem('departments', '${d.id}')" class="text-slate-300 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200">
+                        <h3 class="text-lg font-black italic text-slate-900 uppercase mb-6">Personal</h3>
+                        <div class="space-y-3 mb-6">
+                            <input id="new-emp-name" class="w-full bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none" placeholder="Vollständiger Name...">
+                            <div class="flex gap-2">
+                                <select id="new-emp-dept" class="flex-1 bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none appearance-none">
+                                    <option value="">Abteilung wählen...</option>
+                                    ${state.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
+                                </select>
+                                <button onclick="addEmp()" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors"><i data-lucide="plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            ${state.employees.map(e => `
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                                    <div>
+                                        <div class="font-bold text-sm text-slate-700">${e.name}</div>
+                                        <div class="text-[9px] font-black uppercase text-slate-400">${state.departments.find(d => d.id === e.department)?.name || 'Keine Abteilung'}</div>
+                                    </div>
+                                    <button onclick="deleteDocItem('employees', '${e.id}')" class="text-slate-300 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
-        <div className="max-w-7xl mx-auto">
-          <header className="mb-8">
-            <h2 className="text-3xl font-black italic text-slate-900 tracking-tight uppercase">
-              {activeTab === 'dashboard' ? 'Zeiterfassung' : activeTab === 'archive' ? 'Jahresarchiv' : 'System-Verwaltung'}
-            </h2>
-          </header>
+        function renderArchive(el) {
+            el.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    ${[2024, 2025, 2026].map(y => `
+                        <div class="bg-white p-8 rounded-[2rem] border border-slate-200 flex flex-col items-center text-center space-y-4 hover:shadow-lg transition-all">
+                            <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center"><i data-lucide="calendar" class="w-6 h-6 text-slate-400"></i></div>
+                            <h3 class="text-2xl font-black italic tracking-tighter text-slate-900">${y}</h3>
+                            <button class="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">
+                                <i data-lucide="download" class="w-4 h-4"></i> Export
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
 
-          <div className="transition-all duration-300">
-            {activeTab === 'dashboard' && (
-              <DashboardView 
-                currentWeek={currentWeek} setCurrentWeek={setCurrentWeek} currentYear={currentYear} setCurrentYear={setCurrentYear}
-                departments={departments} selectedDept={selectedDept} setSelectedDept={setSelectedDept}
-                holidays={holidays} toggleHoliday={toggleHoliday} filteredEmployees={filteredEmployees}
-                hoursData={hoursData} handleHourChange={handleHourChange} calculateTotal={calculateTotal}
-              />
-            )}
-            {activeTab === 'archive' && <ArchiveView isExporting={isExporting} setIsExporting={setIsExporting} />}
-            {activeTab === 'admin' && <AdminView departments={departments} employees={employees} user={user} appId={appId} db={db} deleteItem={deleteItem} />}
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
+        // --- Global Action Handlers ---
+        window.changeWeek = (offset) => {
+            state.currentWeek += offset;
+            if (state.currentWeek > 52) { state.currentWeek = 1; state.currentYear++; }
+            if (state.currentWeek < 1) { state.currentWeek = 52; state.currentYear--; }
+            updateUI();
+            setupListeners(); // Reload data for new week
+        };
+
+        window.setDeptFilter = (id) => {
+            state.selectedDept = id;
+            updateUI();
+        };
+
+        window.saveHours = async (empId, day, val) => {
+            if (!state.user) return;
+            const h = parseFloat(val.replace(',', '.')) || 0;
+            const docId = `h_${state.currentYear}_${state.currentWeek}_${empId}_${day}`;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId), {
+                    employeeId: empId, year: state.currentYear, week: state.currentWeek, weekday: day, hours: h
+                });
+            } catch (e) { console.error("Save Error:", e); }
+        };
+
+        window.addDept = async () => {
+            if (!state.user) return;
+            const input = document.getElementById('new-dept-input');
+            const name = input.value;
+            if (!name) return;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), { name });
+            input.value = '';
+        };
+
+        window.addEmp = async () => {
+            if (!state.user) return;
+            const nameInput = document.getElementById('new-emp-name');
+            const deptInput = document.getElementById('new-emp-dept');
+            const name = nameInput.value;
+            const dept = deptInput.value;
+            if (!name || !dept) return;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), { name, department: dept });
+            nameInput.value = '';
+            deptInput.value = '';
+        };
+
+        window.deleteDocItem = async (col, id) => {
+            if (!state.user) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
+        };
+
+        // Start initialization
+        init();
+    </script>
+</body>
+</html>

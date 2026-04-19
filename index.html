@@ -3,352 +3,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro-Exact Zeiterfassung</title>
+    <title>Dispo & Montage Prozessor</title>
+    <!-- Tailwind CSS für das Design -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- React & Babel für Browser-Kompilierung -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Excel Bibliothek -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        body { background-color: #f8fafc; }
+        .output-text {
+            font-family: 'Calibri', sans-serif;
+            font-size: 11pt;
+            white-space: pre;
+            text-align: left;
+            color: #000000;
+        }
+        .active-tab {
+            border-bottom: 4px solid #1e3a8a;
+            color: #1e3a8a;
+            background-color: #eff6ff;
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-900">
-    <div id="app" class="min-h-screen flex flex-col lg:flex-row">
-        <!-- Sidebar -->
-        <aside class="hidden lg:flex flex-col w-72 bg-[#0f172a] text-white p-8 fixed h-full z-20">
-            <div class="mb-12 flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center">
-                    <i data-lucide="database" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-black italic uppercase leading-none">Pro-Exact</h1>
-                    <span class="text-[10px] text-blue-500 tracking-[0.2em] font-bold uppercase">Cloud System</span>
-                </div>
-            </div>
-            
-            <nav class="flex-1 space-y-2">
-                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all bg-blue-600 shadow-lg text-white">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
-                </button>
-                <button onclick="switchTab('archive')" id="nav-archive" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-slate-400 hover:text-white">
-                    <i data-lucide="archive" class="w-5 h-5"></i> Archiv
-                </button>
-                <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-slate-400 hover:text-white">
-                    <i data-lucide="settings" class="w-5 h-5"></i> Verwaltung
-                </button>
-            </nav>
+<body>
+    <div id="root"></div>
 
-            <div class="mt-auto pt-6 border-t border-slate-800">
-                <p id="user-display" class="text-[9px] text-slate-500 font-black uppercase tracking-widest truncate">Verbinde...</p>
-            </div>
-        </aside>
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
 
-        <!-- Main -->
-        <main class="flex-1 lg:ml-72 p-6 md:p-10">
-            <!-- Mobile Nav -->
-            <div class="lg:hidden flex justify-around mb-8 bg-[#0f172a] p-4 rounded-2xl text-white shadow-xl">
-                <button onclick="switchTab('dashboard')"><i data-lucide="layout-dashboard"></i></button>
-                <button onclick="switchTab('archive')"><i data-lucide="archive"></i></button>
-                <button onclick="switchTab('admin')"><i data-lucide="settings"></i></button>
-            </div>
-
-            <div class="max-w-7xl mx-auto" id="content-area">
-                <div id="loading-screen" class="flex flex-col items-center justify-center h-64 gap-4">
-                    <i data-lucide="loader-2" class="w-10 h-10 text-blue-500 animate-spin"></i>
-                    <p class="text-sm font-bold text-slate-400 animate-pulse">Initialisiere Cloud-Synchronisierung...</p>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Globaler State
-        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = window.__app_id || 'pro-exact-2026';
-
-        let state = {
-            user: null,
-            activeTab: 'dashboard',
-            departments: [],
-            employees: [],
-            hours: {},
-            currentWeek: getWeekNumber(new Date()),
-            currentYear: new Date().getFullYear(),
-            selectedDept: 'all',
-            initialized: false
+        const excelDateToJSDate = (serial) => {
+            if (typeof serial !== 'number') return new Date(serial);
+            const utc_days = Math.floor(serial - 25569);
+            const utc_value = utc_days * 86400;
+            const date_info = new Date(utc_value * 1000);
+            const fractional_day = serial - Math.floor(serial) + 0.0000001;
+            let total_seconds = Math.floor(86400 * fractional_day);
+            const seconds = total_seconds % 60;
+            total_seconds -= seconds;
+            const hours = Math.floor(total_seconds / (60 * 60));
+            const minutes = Math.floor(total_seconds / 60) % 60;
+            return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
         };
 
-        function getWeekNumber(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-            return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
-        }
+        const App = () => {
+            const [mode, setMode] = useState('dispo'); 
+            const [data, setData] = useState(null);
+            const [rawRows, setRawRows] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const fileInputRef = useRef(null);
 
-        // --- Firebase Core Logik ---
-        async function startApp() {
-            try {
-                // Regel 3: Auth VOR Firestore
-                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
-                    await signInWithCustomToken(auth, window.__initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setLoading(true);
+                setError(null);
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const bstr = evt.target.result;
+                        const wb = XLSX.read(bstr, { type: 'binary' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+                        setRawRows(jsonData);
+                        processExcelData(jsonData, mode);
+                    } catch (err) {
+                        setError("Fehler beim Verarbeiten der Datei.");
+                        setLoading(false);
+                    }
+                };
+                reader.readAsBinaryString(file);
+            };
+
+            useEffect(() => {
+                if (rawRows) {
+                    processExcelData(rawRows, mode);
+                }
+            }, [mode]);
+
+            const processExcelData = (rows, currentMode) => {
+                if (rows.length < 5) {
+                    setError("Die Datei enthält zu wenig Daten.");
+                    setLoading(false);
+                    return;
                 }
 
-                onAuthStateChanged(auth, (user) => {
-                    state.user = user;
-                    if (user) {
-                        document.getElementById('user-display').innerText = `USER: ${user.uid}`;
-                        syncData();
+                let colMap = { date: 0, memo: 2, order: 3, customer: 4, street: 9, zip: 10, city: 11 };
+                for (let i = 0; i < Math.min(rows.length, 15); i++) {
+                    const row = rows[i];
+                    if (!row) continue;
+                    row.forEach((cell, idx) => {
+                        const val = String(cell).toLowerCase().trim();
+                        if (val.includes("datum")) colMap.date = idx;
+                        if (val === "memo") colMap.memo = idx;
+                        if (val === "auftrag") colMap.order = idx;
+                        if (val === "kunde") colMap.customer = idx;
+                        if (val === "strasse") colMap.street = idx;
+                        if (val === "plz") colMap.zip = idx;
+                        if (val === "ort") colMap.city = idx;
+                    });
+                }
+
+                const deliveryGroups = {
+                    1: { name: "Montag", items: [], date: null },
+                    2: { name: "Dienstag", items: [], date: null },
+                    3: { name: "Mittwoch", items: [], date: null },
+                    4: { name: "Donnerstag", items: [], date: null },
+                    5: { name: "Freitag", items: [], date: null }
+                };
+
+                for (let i = 9; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row || row.length < 2) continue;
+
+                    const rawDate = row[colMap.date];
+                    if (rawDate) {
+                        const date = typeof rawDate === 'number' ? excelDateToJSDate(rawDate) : new Date(rawDate);
+                        if (!isNaN(date.getTime())) {
+                            const dayOfWeek = date.getDay();
+                            if (deliveryGroups[dayOfWeek]) {
+                                if (!deliveryGroups[dayOfWeek].date) deliveryGroups[dayOfWeek].date = date;
+
+                                const kunde = (row[colMap.customer] || "").toString().trim();
+                                const strasse = (row[colMap.street] || "").toString().trim();
+                                const plz = (row[colMap.zip] || "").toString().trim();
+                                const ort = (row[colMap.city] || "").toString().trim();
+                                const rawMemo = (row[colMap.memo] || "").toString().trim();
+                                const auftrag = (row[colMap.order] || "").toString().trim();
+                                
+                                const adresse = (strasse || plz || ort) ? `${strasse}, ${plz} ${ort}` : "";
+                                const cleanMemo = rawMemo.replace(/\r?\n|\r/g, " ");
+
+                                let formattedLine = "";
+                                if (currentMode === 'dispo') {
+                                    // Tourendispo: Jetzt auch mit / Trennung
+                                    formattedLine = `LIEFERUNG / ${kunde} / ${adresse} / ${cleanMemo} / ${auftrag}/SLI`;
+                                } else {
+                                    // Montage-Modus: Wie gehabt ohne "LIEFERUNG" am Anfang
+                                    formattedLine = `${kunde} / ${adresse} / ${cleanMemo}`;
+                                }
+
+                                deliveryGroups[dayOfWeek].items.push(formattedLine);
+                            }
+                        }
                     }
-                });
-            } catch (err) {
-                showError("Authentifizierungsfehler: " + err.message);
-            }
-        }
+                }
 
-        function syncData() {
-            if (!state.user) return;
+                setData([1, 2, 3, 4, 5].map(day => deliveryGroups[day]));
+                setLoading(false);
+            };
 
-            // Regel 1: STRIKTE PFADE
-            const deptsPath = ['artifacts', appId, 'public', 'data', 'departments'];
-            const empsPath = ['artifacts', appId, 'public', 'data', 'employees'];
-            const hoursPath = ['artifacts', appId, 'public', 'data', 'hours'];
+            const formatDate = (date) => {
+                if (!date) return "";
+                return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+            };
 
-            // Listener für Abteilungen
-            onSnapshot(collection(db, ...deptsPath), (snap) => {
-                state.departments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                checkAndRender();
-            }, (err) => showError("Fehler beim Laden der Abteilungen: " + err.message));
+            const handleCopy = () => {
+                const text = document.getElementById('output-area').innerText;
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            };
 
-            // Listener für Mitarbeiter
-            onSnapshot(collection(db, ...empsPath), (snap) => {
-                state.employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                checkAndRender();
-            }, (err) => showError("Fehler beim Laden des Personals: " + err.message));
+            const getAllMontageItems = () => {
+                if (!data) return [];
+                return data.reduce((acc, group) => [...acc, ...group.items], []);
+            };
 
-            // Listener für Stunden
-            onSnapshot(collection(db, ...hoursPath), (snap) => {
-                state.hours = {};
-                snap.docs.forEach(d => {
-                    const data = d.data();
-                    if (data.year === state.currentYear && data.week === state.currentWeek) {
-                        state.hours[`${data.employeeId}_${data.weekday}`] = data.hours;
-                    }
-                });
-                checkAndRender();
-            }, (err) => console.error("Hours sync error:", err));
-        }
-
-        function checkAndRender() {
-            state.initialized = true;
-            updateUI();
-        }
-
-        function showError(msg) {
-            const container = document.getElementById('content-area');
-            container.innerHTML = `
-                <div class="bg-red-50 border border-red-200 p-8 rounded-[2rem] text-red-700">
-                    <div class="flex items-center gap-3 mb-4">
-                        <i data-lucide="alert-circle"></i>
-                        <h2 class="font-black italic uppercase">System-Fehler</h2>
+            return (
+                <div className="min-h-screen pb-20">
+                    <div className="bg-white shadow-sm mb-6 border-b">
+                        <div className="max-w-6xl mx-auto flex">
+                            <button 
+                                onClick={() => setMode('dispo')}
+                                className={`flex-1 py-4 text-center font-bold uppercase transition-all ${mode === 'dispo' ? 'active-tab' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                🚛 Tourendispo
+                            </button>
+                            <button 
+                                onClick={() => setMode('montage')}
+                                className={`flex-1 py-4 text-center font-bold uppercase transition-all ${mode === 'montage' ? 'active-tab' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                🛠️ Montage
+                            </button>
+                        </div>
                     </div>
-                    <p class="text-sm font-bold">${msg}</p>
-                    <button onclick="location.reload()" class="mt-6 bg-red-600 text-white px-6 py-2 rounded-full font-bold text-xs uppercase italic tracking-widest">Neu laden</button>
-                </div>
-            `;
-            lucide.createIcons();
-        }
 
-        window.switchTab = (tab) => {
-            state.activeTab = tab;
-            updateUI();
-        };
-
-        // --- UI Rendering ---
-        function updateUI() {
-            const container = document.getElementById('content-area');
-            if (!state.initialized) return;
-
-            // Nav Buttons Style
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'shadow-lg', 'text-white');
-                btn.classList.add('text-slate-400');
-            });
-            const activeBtn = document.getElementById(`nav-${state.activeTab}`);
-            if (activeBtn) {
-                activeBtn.classList.add('bg-blue-600', 'shadow-lg', 'text-white');
-                activeBtn.classList.remove('text-slate-400');
-            }
-
-            if (state.activeTab === 'dashboard') renderDashboard(container);
-            else if (state.activeTab === 'admin') renderAdmin(container);
-            else if (state.activeTab === 'archive') renderArchive(container);
-
-            lucide.createIcons();
-        }
-
-        function renderDashboard(el) {
-            const weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-            const filtered = state.employees.filter(e => state.selectedDept === 'all' || e.department === state.selectedDept);
-
-            el.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex flex-col md:flex-row justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200">
-                        <div class="flex items-center gap-4">
-                            <button onclick="changeWeek(-1)" class="p-2 hover:bg-slate-100 rounded-full"><i data-lucide="chevron-left"></i></button>
-                            <div class="text-center min-w-[100px]">
-                                <h2 class="text-xl font-black italic uppercase">KW ${state.currentWeek}</h2>
-                                <p class="text-xs font-bold text-slate-500 uppercase">${state.currentYear}</p>
+                    <div className="max-w-6xl mx-auto px-4">
+                        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 border border-gray-100">
+                            <h1 className="text-2xl font-black text-center mb-8 text-slate-800 uppercase italic tracking-tight">
+                                {mode === 'dispo' ? 'Tourendispo Prozessor' : 'Montage Liste (Alle Aufträge)'}
+                            </h1>
+                            
+                            <div 
+                                className="border-4 border-dashed border-gray-100 rounded-xl p-10 text-center mb-8 bg-slate-50 hover:border-blue-300 cursor-pointer transition-all"
+                                onClick={() => fileInputRef.current.click()}
+                            >
+                                <p className="text-lg font-bold text-slate-500 italic">Hier Excel-Datei hochladen (.xlsx)</p>
+                                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx" className="hidden" />
                             </div>
-                            <button onclick="changeWeek(1)" class="p-2 hover:bg-slate-100 rounded-full"><i data-lucide="chevron-right"></i></button>
-                        </div>
-                        <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                            <button onclick="setDeptFilter('all')" class="px-5 py-2 rounded-full font-bold text-xs whitespace-nowrap ${state.selectedDept === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}">Alle</button>
-                            ${state.departments.map(d => `
-                                <button onclick="setDeptFilter('${d.id}')" class="px-5 py-2 rounded-full font-bold text-xs whitespace-nowrap ${state.selectedDept === d.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}">${d.name}</button>
-                            `).join('')}
-                        </div>
-                    </div>
 
-                    <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <tr class="bg-slate-50 border-b">
-                                    <th class="p-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Mitarbeiter</th>
-                                    ${weekdays.map(d => `<th class="p-2 text-[10px] font-black uppercase text-slate-500 text-center">${d.substring(0,2)}</th>`).join('')}
-                                    <th class="p-6 text-[10px] font-black uppercase text-blue-600 text-right tracking-widest">Summe</th>
-                                </tr>
-                                ${filtered.length === 0 ? `<tr><td colspan="9" class="p-10 text-center text-slate-400 font-bold italic">Keine Daten vorhanden. Legen Sie Abteilungen und Personal in der Verwaltung an.</td></tr>` : 
-                                filtered.map(emp => {
-                                    let total = 0;
-                                    weekdays.forEach(d => total += (state.hours[`${emp.id}_${d}`] || 0));
-                                    return `
-                                    <tr class="border-b hover:bg-slate-50/50">
-                                        <td class="p-6">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black text-xs">${emp.name.charAt(0)}</div>
-                                                <span class="font-bold text-sm text-slate-800">${emp.name}</span>
-                                            </div>
-                                        </td>
-                                        ${weekdays.map(d => `
-                                            <td class="p-2 text-center">
-                                                <input type="text" value="${state.hours[`${emp.id}_${d}`] || ''}" 
-                                                    onchange="saveHours('${emp.id}', '${d}', this.value)"
-                                                    class="w-12 h-10 text-center font-black text-sm rounded-xl border-2 border-slate-100 bg-slate-50 focus:border-blue-400 outline-none">
-                                            </td>
-                                        `).join('')}
-                                        <td class="p-6 text-right font-black text-xs">${total.toFixed(2)}h</td>
-                                    </tr>`;
-                                }).join('')}
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
+                            {loading && <p className="text-center font-bold text-blue-600 animate-pulse">Wird umgewandelt...</p>}
+                            {error && <p className="text-red-500 text-center font-bold">{error}</p>}
 
-        function renderAdmin(el) {
-            el.innerHTML = `
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200">
-                        <h3 class="text-lg font-black italic uppercase mb-6">Abteilungen</h3>
-                        <div class="flex gap-2 mb-6">
-                            <input id="new-dept" class="flex-1 bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none" placeholder="Name...">
-                            <button onclick="addDept()" class="bg-blue-600 text-white p-3 rounded-full"><i data-lucide="plus"></i></button>
-                        </div>
-                        <div class="space-y-2">
-                            ${state.departments.map(d => `
-                                <div class="flex justify-between p-3 bg-slate-50 rounded-2xl">
-                                    <span class="font-bold text-sm">${d.name}</span>
-                                    <button onclick="delItem('departments', '${d.id}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200">
-                        <h3 class="text-lg font-black italic uppercase mb-6">Personal</h3>
-                        <div class="space-y-2 mb-6">
-                            <input id="new-emp-name" class="w-full bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none" placeholder="Vollständiger Name...">
-                            <div class="flex gap-2">
-                                <select id="new-emp-dept" class="flex-1 bg-slate-100 rounded-full px-5 py-3 text-sm font-bold outline-none">
-                                    <option value="">Abteilung...</option>
-                                    ${state.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
-                                </select>
-                                <button onclick="addEmp()" class="bg-blue-600 text-white p-3 rounded-full"><i data-lucide="plus"></i></button>
-                            </div>
-                        </div>
-                        <div class="space-y-2">
-                            ${state.employees.map(e => `
-                                <div class="flex justify-between p-3 bg-slate-50 rounded-2xl">
-                                    <div>
-                                        <div class="font-bold text-sm">${e.name}</div>
-                                        <div class="text-[9px] font-black uppercase text-slate-400">${state.departments.find(d => d.id === e.department)?.name || 'N/A'}</div>
+                            {data && (
+                                <div className="animate-in fade-in duration-500">
+                                    <div className={`flex justify-between items-center mb-6 p-4 rounded-xl ${mode === 'dispo' ? 'bg-blue-900' : 'bg-slate-800'}`}>
+                                        <span className="text-white font-mono text-xs uppercase tracking-widest font-bold">
+                                            {mode === 'dispo' ? 'Tourendispo / Format' : 'Montage / Format'}
+                                        </span>
+                                        <button 
+                                            onClick={handleCopy} 
+                                            className="bg-white text-slate-900 px-8 py-2 rounded-lg font-black hover:bg-slate-100 transition-all shadow-md active:scale-95"
+                                        >
+                                            📋 KOPIEREN
+                                        </button>
                                     </div>
-                                    <button onclick="delItem('employees', '${e.id}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    
+                                    <div id="output-area" className="bg-white p-8 border border-gray-200 rounded-xl shadow-inner overflow-x-auto output-text min-h-[300px]">
+                                        {mode === 'dispo' ? (
+                                            data.map((group, idx) => {
+                                                if (group.items.length === 0) return null;
+                                                return (
+                                                    <div key={idx} className="mb-10 last:mb-0">
+                                                        <div className="font-bold border-b-2 border-slate-100 pb-2 mb-4 text-slate-700 text-lg">
+                                                            <span>{group.name} {formatDate(group.date)} ({group.items.length})</span>
+                                                        </div>
+                                                        {group.items.map((item, i) => (
+                                                            <div key={i} className="py-0.5 hover:bg-slate-50 border-b border-transparent hover:border-slate-100">{item}</div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="space-y-0.5">
+                                                {getAllMontageItems().map((item, i) => (
+                                                    <div key={i} className="py-0.5 hover:bg-slate-50 border-b border-transparent hover:border-slate-100">{item}</div>
+                                                ))}
+                                                {getAllMontageItems().length === 0 && <p className="text-slate-400 italic">Keine Montagedaten gefunden.</p>}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            `).join('')}
+                            )}
                         </div>
                     </div>
                 </div>
-            `;
-        }
-
-        function renderArchive(el) {
-            el.innerHTML = `<div class="p-10 text-center bg-white rounded-[2rem] border border-slate-200 font-bold italic text-slate-400">Archiv-Funktion wird vorbereitet...</div>`;
-        }
-
-        // --- Actions ---
-        window.changeWeek = (o) => {
-            state.currentWeek += o;
-            if (state.currentWeek > 52) { state.currentWeek = 1; state.currentYear++; }
-            if (state.currentWeek < 1) { state.currentWeek = 52; state.currentYear--; }
-            updateUI();
+            );
         };
 
-        window.setDeptFilter = (id) => {
-            state.selectedDept = id;
-            updateUI();
-        };
-
-        window.saveHours = async (empId, day, val) => {
-            if (!state.user) return;
-            const h = parseFloat(val.replace(',', '.')) || 0;
-            const docId = `h_${state.currentYear}_${state.currentWeek}_${empId}_${day}`;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'hours', docId), {
-                employeeId: empId, year: state.currentYear, week: state.currentWeek, weekday: day, hours: h
-            });
-        };
-
-        window.addDept = async () => {
-            const input = document.getElementById('new-dept');
-            if (!input.value || !state.user) return;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'departments'), { name: input.value });
-            input.value = '';
-        };
-
-        window.addEmp = async () => {
-            const name = document.getElementById('new-emp-name');
-            const dept = document.getElementById('new-emp-dept');
-            if (!name.value || !dept.value || !state.user) return;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), { name: name.value, department: dept.value });
-            name.value = '';
-        };
-
-        window.delItem = async (col, id) => {
-            if (!state.user) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
-        };
-
-        startApp();
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>

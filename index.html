@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dispo & Montage Prozessor</title>
+    <title>Tourendispo Prozessor</title>
     <!-- Tailwind CSS für das Design -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & Babel für Browser-Kompilierung -->
@@ -20,11 +20,6 @@
             white-space: pre;
             text-align: left;
             color: #000000;
-        }
-        .active-tab {
-            border-bottom: 4px solid #1e3a8a;
-            color: #1e3a8a;
-            background-color: #eff6ff;
         }
     </style>
 </head>
@@ -49,11 +44,11 @@
         };
 
         const App = () => {
-            const [mode, setMode] = useState('dispo'); 
             const [data, setData] = useState(null);
             const [rawRows, setRawRows] = useState(null);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState(null);
+            const [suffix, setSuffix] = useState('SLI'); // Standard-Kürzel
             const fileInputRef = useRef(null);
 
             const handleFileUpload = (e) => {
@@ -70,7 +65,7 @@
                         const ws = wb.Sheets[wb.SheetNames[0]];
                         const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
                         setRawRows(jsonData);
-                        processExcelData(jsonData, mode);
+                        processExcelData(jsonData, suffix);
                     } catch (err) {
                         setError("Fehler beim Verarbeiten der Datei.");
                         setLoading(false);
@@ -79,13 +74,14 @@
                 reader.readAsBinaryString(file);
             };
 
+            // Falls sich das Suffix ändert, Daten neu prozessieren
             useEffect(() => {
                 if (rawRows) {
-                    processExcelData(rawRows, mode);
+                    processExcelData(rawRows, suffix);
                 }
-            }, [mode]);
+            }, [suffix]);
 
-            const processExcelData = (rows, currentMode) => {
+            const processExcelData = (rows, currentSuffix) => {
                 if (rows.length < 5) {
                     setError("Die Datei enthält zu wenig Daten.");
                     setLoading(false);
@@ -138,14 +134,8 @@
                                 const adresse = (strasse || plz || ort) ? `${strasse}, ${plz} ${ort}` : "";
                                 const cleanMemo = rawMemo.replace(/\r?\n|\r/g, " ");
 
-                                let formattedLine = "";
-                                if (currentMode === 'dispo') {
-                                    // Tourendispo: Jetzt auch mit / Trennung
-                                    formattedLine = `LIEFERUNG / ${kunde} / ${adresse} / ${cleanMemo} / ${auftrag}/SLI`;
-                                } else {
-                                    // Montage-Modus: Wie gehabt ohne "LIEFERUNG" am Anfang
-                                    formattedLine = `${kunde} / ${adresse} / ${cleanMemo}`;
-                                }
+                                // Neues Format: LIEFERUNG / Kunde / Adresse / Memo / Auftragsnr/Kürzel
+                                const formattedLine = `LIEFERUNG / ${kunde} / ${adresse} / ${cleanMemo} / ${auftrag}/${currentSuffix}`;
 
                                 deliveryGroups[dayOfWeek].items.push(formattedLine);
                             }
@@ -172,84 +162,72 @@
                 document.body.removeChild(textArea);
             };
 
-            const getAllMontageItems = () => {
-                if (!data) return [];
-                return data.reduce((acc, group) => [...acc, ...group.items], []);
-            };
-
             return (
-                <div className="min-h-screen pb-20">
-                    <div className="bg-white shadow-sm mb-6 border-b">
-                        <div className="max-w-6xl mx-auto flex">
-                            <button 
-                                onClick={() => setMode('dispo')}
-                                className={`flex-1 py-4 text-center font-bold uppercase transition-all ${mode === 'dispo' ? 'active-tab' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                🚛 Tourendispo
-                            </button>
-                            <button 
-                                onClick={() => setMode('montage')}
-                                className={`flex-1 py-4 text-center font-bold uppercase transition-all ${mode === 'montage' ? 'active-tab' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                🛠️ Montage
-                            </button>
-                        </div>
-                    </div>
-
+                <div className="min-h-screen pb-20 pt-10">
                     <div className="max-w-6xl mx-auto px-4">
                         <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 border border-gray-100">
-                            <h1 className="text-2xl font-black text-center mb-8 text-slate-800 uppercase italic tracking-tight">
-                                {mode === 'dispo' ? 'Tourendispo Prozessor' : 'Montage Liste (Alle Aufträge)'}
+                            <h1 className="text-3xl font-black text-center mb-8 text-blue-900 uppercase italic tracking-tight">
+                                Tourendispo Prozessor
                             </h1>
                             
-                            <div 
-                                className="border-4 border-dashed border-gray-100 rounded-xl p-10 text-center mb-8 bg-slate-50 hover:border-blue-300 cursor-pointer transition-all"
-                                onClick={() => fileInputRef.current.click()}
-                            >
-                                <p className="text-lg font-bold text-slate-500 italic">Hier Excel-Datei hochladen (.xlsx)</p>
-                                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx" className="hidden" />
+                            {/* Einstellungs-Bereich */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-slate-50 p-6 rounded-xl border border-slate-100">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 uppercase mb-2">1. Kennzeichen wählen (z.B. SLI, DEL, SCO)</label>
+                                    <input 
+                                        type="text" 
+                                        value={suffix}
+                                        onChange={(e) => setSuffix(e.target.value.toUpperCase())}
+                                        placeholder="z.B. SLI"
+                                        className="w-full p-3 border-2 border-blue-200 rounded-lg font-bold text-blue-900 focus:border-blue-500 focus:outline-none uppercase"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 uppercase mb-2">2. Datei hochladen</label>
+                                    <button 
+                                        onClick={() => fileInputRef.current.click()}
+                                        className="w-full bg-blue-900 text-white font-black py-3 rounded-lg hover:bg-blue-800 transition-all shadow-md"
+                                    >
+                                        EXCEL DATEI WÄHLEN
+                                    </button>
+                                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx" className="hidden" />
+                                </div>
                             </div>
 
-                            {loading && <p className="text-center font-bold text-blue-600 animate-pulse">Wird umgewandelt...</p>}
-                            {error && <p className="text-red-500 text-center font-bold">{error}</p>}
+                            {loading && <p className="text-center font-bold text-blue-600 animate-pulse py-4">Wird umgewandelt...</p>}
+                            {error && <p className="text-red-500 text-center font-bold py-4">{error}</p>}
 
                             {data && (
                                 <div className="animate-in fade-in duration-500">
-                                    <div className={`flex justify-between items-center mb-6 p-4 rounded-xl ${mode === 'dispo' ? 'bg-blue-900' : 'bg-slate-800'}`}>
-                                        <span className="text-white font-mono text-xs uppercase tracking-widest font-bold">
-                                            {mode === 'dispo' ? 'Tourendispo / Format' : 'Montage / Format'}
-                                        </span>
+                                    <div className="flex justify-between items-center mb-6 p-4 rounded-xl bg-blue-900 shadow-lg">
+                                        <div className="flex flex-col">
+                                            <span className="text-blue-200 text-[10px] uppercase font-bold">Aktuelles Format</span>
+                                            <span className="text-white font-mono text-xs font-bold">
+                                                LIEFERUNG / Kunde / Adresse / Memo / Nr/{suffix}
+                                            </span>
+                                        </div>
                                         <button 
                                             onClick={handleCopy} 
-                                            className="bg-white text-slate-900 px-8 py-2 rounded-lg font-black hover:bg-slate-100 transition-all shadow-md active:scale-95"
+                                            className="bg-white text-blue-900 px-8 py-2 rounded-lg font-black hover:bg-slate-100 transition-all shadow-md active:scale-95"
                                         >
-                                            📋 KOPIEREN
+                                            📋 TEXT KOPIEREN
                                         </button>
                                     </div>
                                     
                                     <div id="output-area" className="bg-white p-8 border border-gray-200 rounded-xl shadow-inner overflow-x-auto output-text min-h-[300px]">
-                                        {mode === 'dispo' ? (
-                                            data.map((group, idx) => {
-                                                if (group.items.length === 0) return null;
-                                                return (
-                                                    <div key={idx} className="mb-10 last:mb-0">
-                                                        <div className="font-bold border-b-2 border-slate-100 pb-2 mb-4 text-slate-700 text-lg">
-                                                            <span>{group.name} {formatDate(group.date)} ({group.items.length})</span>
-                                                        </div>
-                                                        {group.items.map((item, i) => (
-                                                            <div key={i} className="py-0.5 hover:bg-slate-50 border-b border-transparent hover:border-slate-100">{item}</div>
-                                                        ))}
+                                        {data.map((group, idx) => {
+                                            if (group.items.length === 0) return null;
+                                            return (
+                                                <div key={idx} className="mb-10 last:mb-0">
+                                                    <div className="font-bold border-b-2 border-slate-100 pb-2 mb-4 text-slate-700 text-lg">
+                                                        <span>{group.name} {formatDate(group.date)} ({group.items.length})</span>
                                                     </div>
-                                                );
-                                            })
-                                        ) : (
-                                            <div className="space-y-0.5">
-                                                {getAllMontageItems().map((item, i) => (
-                                                    <div key={i} className="py-0.5 hover:bg-slate-50 border-b border-transparent hover:border-slate-100">{item}</div>
-                                                ))}
-                                                {getAllMontageItems().length === 0 && <p className="text-slate-400 italic">Keine Montagedaten gefunden.</p>}
-                                            </div>
-                                        )}
+                                                    {group.items.map((item, i) => (
+                                                        <div key={i} className="py-0.5 hover:bg-slate-50 border-b border-transparent hover:border-slate-100">{item}</div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}

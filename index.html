@@ -1,888 +1,1176 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tourendispo Prozessor v2</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script>
-        const firebaseConfigMontage = {
-            apiKey: "AIzaSyD25cVhiguQKP4PTD8evGI4CxSh7rglbBs",
-            authDomain: "montage-pe-a5f79.firebaseapp.com",
-            projectId: "montage-pe-a5f79",
-            storageBucket: "montage-pe-a5f79.firebasestorage.app",
-            messagingSenderId: "588324363042",
-            appId: "1:588324363042:web:c544a07261f62de427237b"
-        };
-        const firebaseConfigKalender = {
-            apiKey: "AIzaSyDStnUEu9A7reQUXBhVz5CrXxkmY4n2nOk",
-            authDomain: "pe-kalender-alle-gruppen.firebaseapp.com",
-            projectId: "pe-kalender-alle-gruppen",
-            storageBucket: "pe-kalender-alle-gruppen.firebasestorage.app",
-            messagingSenderId: "993655186874",
-            appId: "1:993655186874:web:068a06ce160cd611e1e983"
-        };
-        try { window._appMontage = firebase.initializeApp(firebaseConfigMontage, 'montage'); window._dbMontage = firebase.firestore(window._appMontage); } catch(e) { console.warn(e); }
-        try { window._appKalender = firebase.initializeApp(firebaseConfigKalender, 'kalender'); window._dbKalender = firebase.firestore(window._appKalender); } catch(e) { console.warn(e); }
-    </script>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Barlow', sans-serif; background: #0a0f1a; color: #e2e8f0; min-height: 100vh; }
-        h1, h2, h3, .label-font { font-family: 'Barlow Condensed', sans-serif; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tourendispo v3</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfigMontage = {
+    apiKey: "AIzaSyD25cVhiguQKP4PTD8evGI4CxSh7rglbBs",
+    authDomain: "montage-pe-a5f79.firebaseapp.com",
+    projectId: "montage-pe-a5f79",
+    storageBucket: "montage-pe-a5f79.firebasestorage.app",
+    messagingSenderId: "588324363042",
+    appId: "1:588324363042:web:c544a07261f62de427237b"
+};
+const firebaseConfigKalender = {
+    apiKey: "AIzaSyDStnUEu9A7reQUXBhVz5CrXxkmY4n2nOk",
+    authDomain: "pe-kalender-alle-gruppen.firebaseapp.com",
+    projectId: "pe-kalender-alle-gruppen",
+    storageBucket: "pe-kalender-alle-gruppen.firebasestorage.app",
+    messagingSenderId: "993655186874",
+    appId: "1:993655186874:web:068a06ce160cd611e1e983"
+};
+try { window._appMontage = firebase.initializeApp(firebaseConfigMontage, 'montage'); window._dbMontage = firebase.firestore(window._appMontage); } catch(e) { console.warn(e); }
+try { window._appKalender = firebase.initializeApp(firebaseConfigKalender, 'kalender'); window._dbKalender = firebase.firestore(window._appKalender); } catch(e) { console.warn(e); }
+</script>
+<style>
+:root {
+  --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#222222;
+  --border:#2e2e2e;--border2:#3a3a3a;
+  --text:#f0ede8;--text2:#8a8680;--text3:#5a5855;
+  --accent:#e8d5a0;--accent2:#c4a96b;
+  --montage:#7ecfb3;--montage-bg:#0d2e25;
+  --fix:#f08080;--fix-bg:#2e1010;
+  --prov:#8a9bb0;--prov-bg:#1a2030;
+  --blue:#60a5fa;--blue-bg:rgba(59,130,246,0.12);
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+  --cond:'Barlow Condensed',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
 
-        .auftrag-card {
-            background: #111827; border: 1px solid #1f2937;
-            border-radius: 12px; transition: all 0.15s;
-            position: relative; overflow: visible;
-        }
-        .auftrag-card::before {
-            content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-            width: 3px; background: #334155; transition: background 0.2s;
-            border-radius: 12px 0 0 12px;
-        }
-        .auftrag-card.sent::before { background: #10b981; }
-        .auftrag-card.sending::before { background: #f59e0b; animation: pulse 1s infinite; }
-        .auftrag-card.selectable:hover { border-color: #2d3f5c; background: #131e2e; }
-        .auftrag-card.selected { border-color: #3b82f6 !important; background: #0f1e35 !important; box-shadow: 0 0 0 2px rgba(59,130,246,0.25); }
-        .auftrag-card.selected::before { background: #3b82f6 !important; }
+/* ── HEADER ── */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  background:rgba(15,15,15,.97);backdrop-filter:blur(8px);
+  gap:12px;flex-wrap:wrap;
+}
+.header-left{display:flex;align-items:baseline;gap:14px}
+.logo{font-family:var(--cond);font-size:18px;font-weight:900;color:var(--accent);letter-spacing:.12em;text-transform:uppercase}
+.logo-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em}
+.fw-badge{font-family:var(--mono);font-size:11px;background:var(--surface2);color:var(--text2);padding:3px 10px;border-radius:20px;border:1px solid var(--border2)}
+.conn-pills{display:flex;gap:6px;margin-left:auto}
+.conn-pill{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-family:var(--mono);font-size:10px;color:var(--text2)}
+.conn-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.conn-dot.ok{background:var(--montage)}
+.conn-dot.err{background:var(--fix)}
+.header-actions{display:flex;align-items:center;gap:8px}
+.hbtn{padding:6px 14px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-size:12px;font-family:var(--sans);transition:all .15s;white-space:nowrap}
+.hbtn:hover{border-color:var(--accent);color:var(--accent)}
+.hbtn.primary{background:var(--accent);color:#0f0f0f;border-color:var(--accent);font-weight:600}
+.hbtn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.hbtn.green{background:rgba(126,207,179,.12);border-color:rgba(126,207,179,.3);color:var(--montage)}
+.hbtn.green:hover{background:rgba(126,207,179,.2)}
+.suffix-wrap{display:flex;align-items:center;gap:6px}
+.suffix-label{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.suffix-input{width:70px;padding:5px 10px;background:var(--surface);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:12px;font-family:var(--mono);font-weight:600;letter-spacing:2px;text-transform:uppercase;outline:none}
+.suffix-input:focus{border-color:var(--accent2)}
 
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:240px 1fr;height:calc(100vh - 57px)}
 
-        .day-header {
-            background: linear-gradient(90deg, #1e293b, transparent);
-            border-left: 3px solid #3b82f6; padding: 8px 16px;
-            border-radius: 6px; margin: 20px 0 10px;
-        }
-        .day-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #60a5fa; }
-        .day-date { font-size: 12px; color: #64748b; font-weight: 600; }
+/* ── SIDEBAR ── */
+.sidebar{border-right:1px solid var(--border);overflow-y:auto;padding:16px 0;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.sb-section{padding:0 16px;margin-bottom:20px}
+.sb-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kpi-num{font-family:var(--mono);font-size:20px;font-weight:500;line-height:1;margin-bottom:3px}
+.kpi-num.gold{color:var(--accent)}
+.kpi-num.green{color:var(--montage)}
+.kpi-num.red{color:var(--fix)}
+.kpi-num.blue{color:var(--blue)}
+.kpi-lbl{font-size:11px;color:var(--text3)}
+.day-pills{display:flex;flex-direction:column;gap:4px}
+.day-pill{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:7px;cursor:pointer;transition:all .12s;border:1px solid transparent}
+.day-pill:hover{background:var(--surface);border-color:var(--border)}
+.day-pill.active{background:var(--surface2);border-color:var(--accent2)}
+.day-pill-name{font-size:13px;font-weight:500}
+.day-pill.active .day-pill-name{color:var(--accent)}
+.day-pill-meta{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.type-filters{display:flex;flex-direction:column;gap:4px}
+.type-filter{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text2);transition:all .12s;border:1px solid transparent}
+.type-filter:hover{background:var(--surface)}
+.type-filter.active{background:var(--surface);border-color:var(--border2);color:var(--text)}
+.type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.type-count{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text3)}
+.grp-items{display:flex;flex-direction:column;gap:5px}
+.grp-row{display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.grp-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;margin-right:8px}
+.grp-name{color:var(--text2);flex:1}
+.grp-cnt{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.kal-teams{display:flex;flex-direction:column;gap:4px}
+.kal-team-row{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--surface);border-radius:6px;border:1px solid var(--border)}
+.kal-team-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.kal-team-name{font-size:11px;color:var(--text2);flex:1;font-family:var(--mono)}
+.empty-state{padding:24px 16px;text-align:center}
+.empty-icon{font-size:32px;margin-bottom:10px;opacity:.25}
+.empty-txt{font-size:12px;color:var(--text3);line-height:1.7}
 
-        .group-dropdown {
-            position: fixed; z-index: 9999;
-            background: #1a2540; border: 1px solid #2d3f5c;
-            border-radius: 12px; padding: 6px;
-            min-width: 280px; box-shadow: 0 24px 60px rgba(0,0,0,0.85);
-        }
-        .group-option {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px 10px; border-radius: 7px; cursor: pointer;
-            font-size: 11px; font-weight: 700; color: #e2e8f0;
-            transition: background 0.1s; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .group-option:hover { background: rgba(59,130,246,0.15); }
-        .group-option-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .cal-type-badge { font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+/* ── MAIN ── */
+.main{overflow-y:auto;display:flex;flex-direction:column}
+.toolbar{display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;background:var(--bg);flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:160px;max-width:240px}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);width:13px;pointer-events:none}
+.search-input{width:100%;padding:7px 10px 7px 28px;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:var(--sans);transition:border-color .15s}
+.search-input:focus{outline:none;border-color:var(--accent2)}
+.search-input::placeholder{color:var(--text3)}
+.view-toggle{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.view-btn{padding:6px 12px;font-size:12px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .12s;font-family:var(--sans)}
+.view-btn.active{background:var(--surface2);color:var(--text)}
+.result-count{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.sel-btn{padding:6px 14px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-size:11px;font-family:var(--sans);transition:all .15s;white-space:nowrap}
+.sel-btn:hover{border-color:var(--blue);color:var(--blue)}
+.sel-btn.active{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
 
-        .stat-box { background: #111827; border: 1px solid #1f2937; border-radius: 10px; padding: 14px 18px; }
-        .stat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; }
-        .stat-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-top: 2px; }
+/* ── TABLE ── */
+.table-container{flex:1;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 12px;font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:var(--surface)}
+tbody tr.has-montage{border-left:2px solid var(--montage)}
+tbody tr.no-montage{border-left:2px solid transparent}
+tbody tr.selected-row{background:rgba(59,130,246,0.07)!important;border-left:2px solid var(--blue)!important}
+td{padding:8px 12px;vertical-align:middle}
+.td-date{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
+.td-auftrag{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
+.td-kunde-name{font-weight:500;font-size:13px}
+.td-kunde-sub{font-size:11px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.td-ort{font-size:12px;white-space:nowrap}
+.td-ele{font-family:var(--mono);font-size:12px;text-align:right;color:var(--text2)}
+.badge{display:inline-flex;align-items:center;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:4px;font-weight:500;white-space:nowrap;margin:1px}
+.badge-montage{background:var(--montage-bg);color:var(--montage)}
+.badge-fix{background:var(--fix-bg);color:var(--fix)}
+.badge-prov{background:var(--prov-bg);color:var(--prov)}
+.badge-sent{background:rgba(126,207,179,.1);color:var(--montage);border:1px solid rgba(126,207,179,.25)}
+.memo-text{font-size:11px;color:var(--text3);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb-cell{width:36px;text-align:center}
+.cb{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);background:var(--surface2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;font-size:10px}
+.cb.checked{background:var(--blue);border-color:var(--blue);color:#fff}
 
-        .toast {
-            position: fixed; bottom: 100px; right: 24px; z-index: 10000;
-            background: #1e293b; border: 1px solid #334155;
-            border-radius: 12px; padding: 14px 18px;
-            display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            animation: toastIn 0.3s ease-out; min-width: 280px; max-width: 400px;
-        }
-        .toast.success { border-color: rgba(16,185,129,0.5); }
-        .toast.error { border-color: rgba(239,68,68,0.5); }
-        @keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+/* ── SEND BUTTON in table ── */
+.send-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:700;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;border:1px solid;transition:all .15s;white-space:nowrap;background:transparent}
+.send-btn.idle{border-color:rgba(59,130,246,.3);color:var(--blue)}
+.send-btn.idle:hover{background:var(--blue-bg)}
+.send-btn.done{border-color:rgba(126,207,179,.3);color:var(--montage);cursor:default}
+.send-btn.sending{border-color:rgba(245,158,11,.3);color:#f59e0b;cursor:wait}
 
-        .progress-bar { height: 3px; background: #0f172a; border-radius: 2px; overflow: hidden; margin-top: 4px; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); transition: width 0.4s ease; }
+/* ── GROUP DROPDOWN ── */
+.grp-dropdown{
+  position:fixed;z-index:9999;
+  background:#1a2030;border:1px solid #2d3f5c;
+  border-radius:12px;padding:6px;
+  min-width:260px;box-shadow:0 20px 50px rgba(0,0,0,.8);
+}
+.grp-drop-section{padding:4px 8px 2px;font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
+.grp-drop-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text);transition:background .1s;text-transform:uppercase;letter-spacing:.5px}
+.grp-drop-item:hover{background:rgba(59,130,246,.12)}
+.grp-drop-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ct-badge{font-size:8px;font-weight:800;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px;margin-left:auto}
+.grp-divider{height:1px;background:var(--border);margin:4px 4px}
 
-        /* ── CHECKBOX ── */
-        .cb {
-            width: 22px; height: 22px; border-radius: 6px;
-            border: 2px solid #334155; background: #0f172a;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; transition: all 0.15s; cursor: pointer; font-size: 12px;
-        }
-        .cb.checked { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+/* ── DAY VIEW ── */
+.day-view{display:none;padding:16px}
+.day-view.active{display:block}
+.day-col-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.day-col-header{padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px 8px 0 0;border-bottom:none}
+.day-col-title{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:500}
+.day-col-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.day-col-body{border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;min-height:200px;background:var(--surface)}
+.day-card{padding:9px 11px;border-bottom:1px solid var(--border);font-size:12px;transition:background .1s;cursor:default}
+.day-card:last-child{border-bottom:none}
+.day-card:hover{background:var(--surface2)}
+.day-card.montage{border-left:2px solid var(--montage)}
+.day-card-kunde{font-weight:500;font-size:12px;margin-bottom:2px}
+.day-card-ort{font-size:11px;color:var(--text3);margin-bottom:4px}
+.day-card-badges{display:flex;gap:3px;flex-wrap:wrap;align-items:center}
+.day-card-send{margin-left:auto}
 
-        /* ── FLOATING SELECTION BAR ── */
-        .sel-bar {
-            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-            z-index: 5000;
-            background: #1a2540;
-            border: 1.5px solid #2d4a7a;
-            border-radius: 18px; padding: 12px 20px;
-            display: flex; align-items: center; gap: 12px;
-            box-shadow: 0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(59,130,246,0.15);
-            animation: barUp 0.3s cubic-bezier(.34,1.56,.64,1);
-            white-space: nowrap; flex-wrap: nowrap;
-        }
-        @keyframes barUp { from{opacity:0;transform:translateX(-50%) translateY(24px);} to{opacity:1;transform:translateX(-50%) translateY(0);} }
-        .sel-bar-count {
-            background: linear-gradient(135deg, #3b82f6, #6366f1);
-            color: #fff; font-family: 'Barlow Condensed', sans-serif;
-            font-size: 20px; font-weight: 900; border-radius: 10px;
-            padding: 2px 14px; min-width: 40px; text-align: center;
-        }
-        .sel-bar-btn {
-            padding: 8px 16px; border-radius: 10px; cursor: pointer;
-            font-size: 10px; font-weight: 800; text-transform: uppercase;
-            letter-spacing: 0.8px; border: 1.5px solid; transition: all 0.15s;
-            font-family: 'Barlow Condensed', sans-serif; white-space: nowrap;
-        }
+/* ── FLOATING SELECTION BAR ── */
+.sel-bar{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  z-index:5000;background:#1a2030;border:1.5px solid #2d4a7a;
+  border-radius:16px;padding:10px 18px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:0 20px 50px rgba(0,0,0,.8);
+  animation:barUp .25s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap;
+}
+@keyframes barUp{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.sel-bar-cnt{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-family:var(--cond);font-size:20px;font-weight:900;border-radius:8px;padding:2px 14px;min-width:36px;text-align:center}
+.sel-bar-label{color:#fff;font-size:12px;font-weight:600}
+.sel-bar-sub{color:var(--text3);font-size:10px}
+.sel-bar-sep{width:1px;height:28px;background:var(--border)}
+.sel-bar-btn{padding:8px 16px;border-radius:9px;cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;border:1.5px solid;transition:all .15s;font-family:var(--cond);white-space:nowrap}
 
-        /* ── SELECT MODE TOOLBAR ── */
-        .sel-toolbar {
-            background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.18);
-            border-radius: 12px; padding: 10px 16px; margin-bottom: 12px;
-            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-        }
-    </style>
+/* ── MULTI SEND MODAL ── */
+.modal-bg{position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{width:100%;max-width:480px;background:#0f1520;border:1px solid #1e293b;border-radius:20px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.7)}
+.modal-head{background:linear-gradient(135deg,#1a2540,#0f1520);padding:18px 22px;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:12px}
+.modal-icon{width:42px;height:42px;background:rgba(59,130,246,.12);border:1.5px solid rgba(59,130,246,.3);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.modal-title-sub{color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px}
+.modal-title{color:#fff;font-size:20px;font-weight:900;font-family:var(--cond);text-transform:uppercase;line-height:1.1}
+.modal-close{margin-left:auto;background:rgba(255,255,255,.06);border:none;border-radius:7px;width:30px;height:30px;cursor:pointer;color:#94a3b8;font-size:16px;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.modal-section-label{color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;font-family:var(--mono)}
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.app-btn{padding:11px 8px;border-radius:10px;border:2px solid;font-size:10px;font-weight:800;cursor:pointer;font-family:var(--cond);text-transform:uppercase;transition:all .15s;text-align:center}
+.app-btn-icon{font-size:18px;margin-bottom:3px}
+.app-btn-sub{font-size:8px;font-weight:600;opacity:.7;margin-top:2px}
+.teams-list{display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto;padding-right:2px}
+.team-opt{display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:8px;cursor:pointer;border:1.5px solid;transition:all .15s}
+.team-opt-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.team-opt-name{color:#fff;font-size:13px;font-weight:800;font-family:var(--cond);text-transform:uppercase;flex:1}
+.ct-grid{display:flex;gap:7px}
+.ct-btn{flex:1;padding:9px 4px;border-radius:9px;border:2px solid;font-size:10px;font-weight:800;cursor:pointer;font-family:var(--cond);text-transform:uppercase;transition:all .15s;text-align:center}
+.progress-bar{height:3px;background:#0f172a;border-radius:2px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);transition:width .3s ease}
+.modal-actions{display:flex;gap:8px;margin-top:4px}
+.modal-cancel{flex:1;padding:11px;background:transparent;border:1px solid #1e293b;border-radius:10px;color:#64748b;font-weight:700;font-size:10px;text-transform:uppercase;cursor:pointer;font-family:var(--cond)}
+.modal-send{flex:2;padding:11px;border-radius:10px;border:none;font-weight:800;font-size:10px;text-transform:uppercase;font-family:var(--cond);cursor:pointer;transition:all .15s}
+.modal-send.ready{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff}
+.modal-send.disabled{background:#1e293b;color:#475569;cursor:not-allowed}
+.modal-done-state{text-align:center;padding:24px 0}
+
+/* ── TOAST ── */
+.toast-wrap{position:fixed;bottom:80px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:8px;box-shadow:0 16px 32px rgba(0,0,0,.5);animation:toastIn .25s ease-out;min-width:240px;max-width:360px;pointer-events:auto}
+.toast.success{border-color:rgba(126,207,179,.4)}
+.toast.error{border-color:rgba(240,128,128,.4)}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── LOADING ── */
+#loadOverlay{display:none;position:fixed;inset:0;background:rgba(15,15,15,.9);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+tbody tr{animation:fadeIn .12s ease both}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
-// ── HELPERS ──
-const excelDateToJSDate = (serial) => {
-    if (typeof serial !== 'number') return new Date(serial);
-    const utc_days = Math.floor(serial - 25569);
-    const date_info = new Date(utc_days * 86400 * 1000);
-    const frac = serial - Math.floor(serial) + 0.0000001;
-    let total_sec = Math.floor(86400 * frac);
-    const seconds = total_sec % 60; total_sec -= seconds;
-    const hours = Math.floor(total_sec / 3600);
-    const minutes = Math.floor(total_sec / 60) % 60;
-    return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
-};
-const toLocalDateStr = (d) => { if (!d) return ''; const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
-const genId = () => { try { const u=crypto.randomUUID(); if(u) return u; } catch(e) {} return Math.random().toString(36).slice(2)+Date.now().toString(36); };
-const cleanAuftragsNr = (nr) => { if (!nr) return ''; return String(nr).replace(/\s*\/\s*SLI\s*/gi,'').trim(); };
-const DAY_NAMES = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+<!-- LOADING -->
+<div id="loadOverlay" style="display:none;flex">
+  <div style="width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite"></div>
+  <div style="font-family:var(--mono);font-size:12px;color:var(--text2)" id="loadMsg">Wird geladen…</div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <span class="logo">Tourendispo</span>
+    <span class="logo-sub">v3 · Multi-Kalender</span>
+  </div>
+  <div class="conn-pills">
+    <div class="conn-pill"><div class="conn-dot" id="dot-montage"></div><span>PE-MONTAGE</span></div>
+    <div class="conn-pill"><div class="conn-dot" id="dot-kalender"></div><span id="kal-cnt">PE-KALENDER</span></div>
+  </div>
+  <span class="fw-badge" id="kwBadge">— Keine Datei —</span>
+  <div class="header-actions">
+    <div class="suffix-wrap">
+      <span class="suffix-label">Kürzel</span>
+      <input class="suffix-input" type="text" id="suffixInput" value="SLI" maxlength="8" placeholder="SLI" oninput="onSuffixChange(this)">
+    </div>
+    <button class="hbtn primary" onclick="document.getElementById('xlsxInput').click()">↑ Excel laden</button>
+    <input type="file" id="xlsxInput" accept=".xlsx,.xls,.xltm" style="display:none" onchange="loadExcel(this)">
+    <button class="hbtn" onclick="exportCSV()" id="btnExport" style="display:none">↓ CSV</button>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Übersicht</div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-num gold" id="s-total">—</div><div class="kpi-lbl">Aufträge</div></div>
+        <div class="kpi"><div class="kpi-num green" id="s-montage">—</div><div class="kpi-lbl">Mit Montage</div></div>
+        <div class="kpi"><div class="kpi-num red" id="s-fix">—</div><div class="kpi-lbl">Termin FIX</div></div>
+        <div class="kpi"><div class="kpi-num blue" id="s-sent">0</div><div class="kpi-lbl">Gesendet</div></div>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Tag</div>
+      <div class="day-pills" id="dayPills"></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Filter</div>
+      <div class="type-filters" id="typeFilters">
+        <div class="type-filter active" data-filter="all" onclick="setTypeFilter('all',this)"><div class="type-dot" style="background:var(--text2)"></div>Alle<span class="type-count" id="cnt-all">—</span></div>
+        <div class="type-filter" data-filter="montage" onclick="setTypeFilter('montage',this)"><div class="type-dot" style="background:var(--montage)"></div>Mit Montage<span class="type-count" id="cnt-montage">—</span></div>
+        <div class="type-filter" data-filter="fix" onclick="setTypeFilter('fix',this)"><div class="type-dot" style="background:var(--fix)"></div>Termin FIX<span class="type-count" id="cnt-fix">—</span></div>
+        <div class="type-filter" data-filter="notsent" onclick="setTypeFilter('notsent',this)"><div class="type-dot" style="background:var(--blue)"></div>Nicht gesendet<span class="type-count" id="cnt-notsent">—</span></div>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Kalender-Gruppen</div>
+      <div class="kal-teams" id="kalTeamsList">
+        <div style="font-size:11px;color:var(--text3);padding:4px 0">Verbinde…</div>
+      </div>
+    </div>
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-txt">Noch keine Daten.<br>Lade eine Excel-Datei.</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/></svg>
+        <input class="search-input" type="text" id="search" placeholder="Kunde, Ort, Auftragsnr…" oninput="render()">
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-list" onclick="setView('list')">Liste</button>
+        <button class="view-btn" id="btn-day" onclick="setView('day')">Tage</button>
+      </div>
+      <button class="sel-btn" id="selModeBtn" onclick="toggleSelectMode()">☑ Auswählen</button>
+      <button class="hbtn green" id="btnSendAll" style="display:none;font-size:11px" onclick="openSendAll()">📤 Alle senden</button>
+      <span class="result-count" id="resultCount"></span>
+    </div>
+
+    <div class="table-container" id="listView">
+      <table>
+        <thead><tr>
+          <th class="cb-cell" id="th-cb" style="display:none"></th>
+          <th>Datum</th><th>Auftrag</th><th>Kunde / Projekt</th>
+          <th>Ort</th><th style="text-align:right">ELE</th>
+          <th>Status</th><th>Memo</th><th>Senden</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="day-view" id="dayView">
+      <div class="day-col-grid" id="dayColGrid"></div>
+    </div>
+  </main>
+</div>
+
+<!-- FLOATING SELECTION BAR -->
+<div class="sel-bar" id="selBar" style="display:none">
+  <div class="sel-bar-cnt" id="selBarCnt">0</div>
+  <div>
+    <div class="sel-bar-label" id="selBarLabel">Aufträge markiert</div>
+    <div class="sel-bar-sub">Bereit zum Senden</div>
+  </div>
+  <div class="sel-bar-sep"></div>
+  <button class="sel-bar-btn" onclick="openMultiSend()" style="background:linear-gradient(135deg,#10b981,#059669);border-color:#10b981;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.35)">📤 Auswahl senden</button>
+  <button class="sel-bar-btn" onclick="clearSelection()" style="background:rgba(255,255,255,.05);border-color:var(--border2);color:var(--text2)">Leeren</button>
+  <button class="sel-bar-btn" onclick="toggleSelectMode()" style="background:rgba(240,128,128,.08);border-color:rgba(240,128,128,.25);color:var(--fix)">✕</button>
+</div>
+
+<!-- MULTI SEND MODAL -->
+<div class="modal-bg" id="multiSendModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-icon">📤</div>
+      <div>
+        <div class="modal-title-sub">Auswahl senden</div>
+        <div class="modal-title" id="modalTitle">0 Aufträge → Kalender</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════
 const CAL_TYPES = [
-    { key:'montage',    label:'Montage',    icon:'🔧', color:'#3b82f6', bg:'rgba(59,130,246,0.15)',  border:'rgba(59,130,246,0.4)' },
-    { key:'beplankung', label:'Beplankung', icon:'🏗',  color:'#10b981', bg:'rgba(16,185,129,0.15)', border:'rgba(16,185,129,0.4)' },
-    { key:'ausflocken', label:'Ausflocken', icon:'❄️',  color:'#f97316', bg:'rgba(249,115,22,0.15)', border:'rgba(249,115,22,0.4)' },
+  { key:'montage',    label:'Montage',    icon:'🔧', color:'#3b82f6', bg:'rgba(59,130,246,.15)', border:'rgba(59,130,246,.4)' },
+  { key:'beplankung', label:'Beplankung', icon:'🏗',  color:'#10b981', bg:'rgba(16,185,129,.15)', border:'rgba(16,185,129,.4)' },
+  { key:'ausflocken', label:'Ausflocken', icon:'❄️',  color:'#f97316', bg:'rgba(249,115,22,.15)',  border:'rgba(249,115,22,.4)'  },
 ];
-const parseCalTypes = (calType) => {
-    if (!calType||calType==='montage') return ['montage'];
-    if (calType==='both'||calType==='all') return ['montage','beplankung','ausflocken'];
-    if (calType==='beplankung') return ['beplankung'];
-    if (calType==='ausflocken') return ['ausflocken'];
-    try { const arr=JSON.parse(calType); if(Array.isArray(arr)) return arr; } catch(e) {}
-    return ['montage'];
-};
+const GRUPPEN = ["A","B","C","D","E"];
+const GCOLORS = {A:"#7ec8e3",B:"#b5a0d8",C:"#f0c070",D:"#80d0a0",E:"#f09080"};
 
-// ── FIREBASE HELPERS ──
-const sendToMontage = async (entry, calType) => {
-    if (!window._dbMontage) throw new Error('PE-Montage Firebase nicht verbunden');
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let state = [];          // all parsed rows
+let DAYS  = {};          // {datum: shortLabel}
+let kalenderTeams = [];
+let activeDay   = 'all';
+let typeFilter  = 'all';
+let currentView = 'list';
+let selectMode  = false;
+let selectedIds = new Set();
+let sentAuftragIds = new Set(); // track sent
+let suffix = 'SLI';
+let rawRows = null;
+let modalEntries = [];
+let modalSendingState = {};
 
-    // 1) Kalender-Eintrag (Wochenkalender URIM)
-    const calId = `cal-${genId()}`;
-    await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/calentries').doc(calId).set({
-        id:calId, createdAt:new Date().toISOString(), isDone:false, isBilled:false,
-        entryType:'LIEFERUNG', customer:entry.customer||'', address:entry.address||'',
-        memo:entry.memo||'', auftragsNr:cleanAuftragsNr(entry.auftragsNr||''),
-        target:entry.target||0, images:[], image:null, deliveryDate:entry.date||'',
-        endDate:null, isMultiDay:false, calType:calType||'montage', isProv:false, customStartLabel:'',
-    });
+// ══════════════════════════════════════════════
+// FIREBASE — connection checks
+// ══════════════════════════════════════════════
+document.getElementById('dot-montage').className = 'conn-dot ' + (window._dbMontage ? 'ok' : 'err');
+document.getElementById('dot-kalender').className = 'conn-dot ' + (window._dbKalender ? 'ok' : 'err');
 
-    // 2) Objekt-Eintrag (Admin Panel → Dispo-Text Importieren Liste)
-    const memo = entry.memo || '';
-    const houseInfo = memo.replace(/\d+\s*ELE/gi,'').replace(/\bGIS\b/gi,'').replace(/[-–]\s*$/,'').trim() || 'Gesamtmontage';
-    const objId = `obj-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
-    await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/objects').doc(objId).set({
-        id:objId,
-        name: entry.address||'',
-        customer: entry.customer||'',
-        address: entry.address||'',
-        houseInfo: houseInfo,
-        auftragsNr: cleanAuftragsNr(entry.auftragsNr||''),
-        target: entry.target||0,
-        current: 0,
-        lastRemaining: null,
-        blockReason: null,
-        deliveryDate: entry.date ? new Date(entry.date).toISOString() : new Date().toISOString(),
-        status: 'active',
-        history: [],
-    });
-
-    return calId;
-};
-const sendToKalender = async (entry, teamId, calType) => {
-    if (!window._dbKalender) throw new Error('PE-Kalender Firebase nicht verbunden');
-    const id = `cal-${genId()}`;
-    await window._dbKalender.collection(`teams_cal_${teamId}`).doc(id).set({
-        id, createdAt:new Date().toISOString(), isDone:false, isBilled:false,
-        entryType:'LIEFERUNG', customer:entry.customer||'', address:entry.address||'',
-        memo:entry.memo||'', auftragsNr:cleanAuftragsNr(entry.auftragsNr||''),
-        target:entry.target||0, images:[], image:null, deliveryDate:entry.date||'',
-        endDate:null, isMultiDay:false, calType:calType||'montage', isProv:false, customStartLabel:'',
-    });
-    return id;
-};
-
-// ── TOAST ──
-function Toast({ msg, type, onDone }) {
-    useEffect(() => { const t=setTimeout(onDone,3500); return ()=>clearTimeout(t); }, []);
-    return (
-        <div className={`toast ${type}`}>
-            <span style={{fontSize:20}}>{type==='success'?'✅':type==='sending'?'⏳':'❌'}</span>
-            <div style={{color:'#fff',fontSize:12,fontWeight:700}}>{msg}</div>
-        </div>
-    );
+if (window._dbKalender) {
+  window._dbKalender.collection('teams_config').onSnapshot(snap => {
+    kalenderTeams = snap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    document.getElementById('kal-cnt').textContent = `PE-KALENDER (${kalenderTeams.length})`;
+    renderKalenderTeamsList();
+    if (state.length) render();
+  }, err => console.error(err));
 }
 
-// ── GROUP DROPDOWN (portal, fixed position) ──
-function GroupDropdown({ kalenderTeams, onSelect, onClose, position }) {
-    const ref = useRef(null);
-    useEffect(() => {
-        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-        const s = () => onClose();
-        document.addEventListener('mousedown', h);
-        window.addEventListener('scroll', s, true);
-        return () => { document.removeEventListener('mousedown', h); window.removeEventListener('scroll', s, true); };
-    }, []);
-
-    const dropH = 420;
-    const spaceBelow = window.innerHeight - (position?.bottom || 0);
-    const openUp = spaceBelow < dropH;
-    const style = {
-        top:  openUp ? 'auto' : (position ? position.bottom + 4 : 0),
-        bottom: openUp ? (window.innerHeight - (position?.top || 0) + 4) : 'auto',
-        left: position ? Math.min(position.right - 280, window.innerWidth - 290) : 0,
-    };
-
-    return ReactDOM.createPortal(
-        <div className="group-dropdown" ref={ref} style={style}>
-            <div style={{padding:'4px 10px 4px',color:'#475569',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:1,marginBottom:2}}>
-                🔵 PE-MONTAGE — <span style={{color:'#10b981',fontSize:8}}>Kalender + Objekt-Liste</span>
-            </div>
-            {CAL_TYPES.map(ct => (
-                <div key={ct.key} className="group-option" onClick={()=>onSelect('montage',null,ct.key)}
-                    style={{borderLeft:`3px solid ${ct.color}`,marginBottom:2}}>
-                    <div className="group-option-dot" style={{background:ct.color}}></div>
-                    <div style={{flex:1}}><span style={{color:'#fff',fontWeight:900}}>URIM</span><span style={{color:'#475569',marginLeft:5,fontSize:9}}>PE-Montage</span></div>
-                    <span className="cal-type-badge" style={{background:ct.bg,color:ct.color,border:`1px solid ${ct.border}`}}>{ct.icon} {ct.label}</span>
-                </div>
-            ))}
-            <div style={{height:1,background:'#1e293b',margin:'6px 2px'}}></div>
-            <div style={{padding:'4px 10px 4px',color:'#475569',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:1,marginBottom:2}}>
-                🟣 PE-KALENDER GRUPPEN
-            </div>
-            {kalenderTeams.length===0 && <div style={{padding:'8px 10px',color:'#475569',fontSize:10}}>Lade Gruppen...</div>}
-            {kalenderTeams.map(team => {
-                const types = parseCalTypes(team.calType);
-                return types.map(ct => {
-                    const ctCfg = CAL_TYPES.find(x=>x.key===ct)||CAL_TYPES[0];
-                    return (
-                        <div key={`${team.id}-${ct}`} className="group-option" onClick={()=>onSelect('kalender',team,ct)}
-                            style={{borderLeft:`3px solid ${team.color||ctCfg.color}`,marginBottom:2}}>
-                            <div className="group-option-dot" style={{background:team.color||ctCfg.color}}></div>
-                            <div style={{flex:1,fontWeight:900,color:'#fff'}}>{team.name}</div>
-                            <span className="cal-type-badge" style={{background:ctCfg.bg,color:ctCfg.color,border:`1px solid ${ctCfg.border}`}}>{ctCfg.icon} {ctCfg.label}</span>
-                        </div>
-                    );
-                });
-            })}
-        </div>,
-        document.body
-    );
+function renderKalenderTeamsList() {
+  const el = document.getElementById('kalTeamsList');
+  if (!kalenderTeams.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:4px 0">Keine Gruppen</div>'; return; }
+  el.innerHTML = kalenderTeams.map(t => `
+    <div class="kal-team-row">
+      <div class="kal-team-dot" style="background:${t.color||'#8a9bb0'}"></div>
+      <span class="kal-team-name">${t.name}</span>
+    </div>
+  `).join('');
 }
 
-// ── SINGLE AUFTRAG ROW ──
-function AuftragRow({ entry, kalenderTeams, onSent, toast, selectMode, isSelected, onToggleSelect }) {
-    const [open, setOpen] = useState(false);
-    const [sending, setSending] = useState(false);
-    const [sentTo, setSentTo] = useState([]);
-    const [btnRect, setBtnRect] = useState(null);
-    const btnRef = useRef(null);
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+const genId = () => { try{const u=crypto.randomUUID();if(u)return u;}catch(e){} return Math.random().toString(36).slice(2)+Date.now().toString(36); };
+const cleanAuftragsNr = (nr) => String(nr||'').replace(/\s*\/\s*SLI\s*/gi,'').replace(/\s*\/\s*[A-Z]{2,6}\s*/gi,'').trim();
+const toLocalDateStr = (d) => { if(!d)return''; const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
 
-    const handleToggle = (e) => {
-        if (selectMode) { onToggleSelect(entry._id); return; }
-        if (sending) return;
-        if (!open && btnRef.current) setBtnRect(btnRef.current.getBoundingClientRect());
-        setOpen(o => !o);
-    };
-
-    const handleSelect = async (app, team, calType) => {
-        setOpen(false); setSending(true);
-        try {
-            if (app === 'montage') {
-                await sendToMontage(entry, calType);
-                const ct = CAL_TYPES.find(x=>x.key===calType);
-                setSentTo(prev=>[...prev,{label:`Urim / ${ct?.label||calType}`,color:ct?.color||'#10b981'}]);
-                toast('success',`✅ → PE-Montage URIM / ${ct?.label||calType} (Kalender + Objekt-Liste)`);
-            } else {
-                await sendToKalender(entry, team.id, calType);
-                const ct = CAL_TYPES.find(x=>x.key===calType);
-                setSentTo(prev=>[...prev,{label:`${team.name} / ${ct?.label||calType}`,color:team.color||ct?.color||'#10b981'}]);
-                toast('success',`✅ → ${team.name} / ${ct?.label||calType}`);
-            }
-            onSent && onSent();
-        } catch(err) { toast('error',`❌ ${err.message}`); }
-        setSending(false);
-    };
-
-    const cardClass = [
-        'auftrag-card',
-        sentTo.length>0 ? 'sent' : '',
-        sending ? 'sending' : '',
-        selectMode ? 'selectable' : '',
-        isSelected ? 'selected' : '',
-    ].filter(Boolean).join(' ');
-
-    return (
-        <div className={cardClass}
-            style={{padding:'10px 14px 10px 18px', cursor: selectMode ? 'pointer' : 'default'}}
-            onClick={selectMode ? ()=>onToggleSelect(entry._id) : undefined}>
-            <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
-                {/* Checkbox in select mode */}
-                {selectMode && (
-                    <div className={`cb${isSelected?' checked':''}`} onClick={e=>{e.stopPropagation();onToggleSelect(entry._id);}}>
-                        {isSelected && '✓'}
-                    </div>
-                )}
-                {/* Info */}
-                <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:3}}>
-                        <span style={{color:'#fff',fontSize:13,fontWeight:700,textTransform:'uppercase'}}>{entry.customer}</span>
-                        {entry.auftragsNr && (
-                            <span style={{background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:5,padding:'1px 7px',color:'#60a5fa',fontSize:9,fontWeight:800,fontFamily:'monospace'}}>
-                                #{cleanAuftragsNr(entry.auftragsNr)}
-                            </span>
-                        )}
-                        {entry.target>0 && (
-                            <span style={{background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.2)',borderRadius:5,padding:'1px 7px',color:'#34d399',fontSize:9,fontWeight:800}}>
-                                {entry.target} ELE
-                            </span>
-                        )}
-                    </div>
-                    <div style={{color:'#94a3b8',fontSize:11,marginBottom:entry.memo?4:0}}>{entry.address}</div>
-                    {entry.memo && (
-                        <div style={{display:'flex',gap:5,alignItems:'flex-start',background:'rgba(245,158,11,0.07)',borderLeft:'2px solid #f59e0b',borderRadius:'0 5px 5px 0',padding:'4px 8px',marginTop:4}}>
-                            <span style={{fontSize:10}}>📝</span>
-                            <span style={{color:'#fbbf24',fontSize:10,fontWeight:600,lineHeight:1.4}}>{entry.memo}</span>
-                        </div>
-                    )}
-                    {sentTo.length>0 && (
-                        <div style={{display:'flex',gap:5,flexWrap:'wrap',marginTop:6}}>
-                            {sentTo.map((s,i)=>(
-                                <span key={i} style={{display:'inline-flex',alignItems:'center',gap:4,background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)',borderRadius:6,padding:'2px 8px',fontSize:9,fontWeight:700,color:'#10b981'}}>
-                                    ✓ {s.label}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                {/* Send button — hidden in select mode */}
-                {!selectMode && (
-                    <div style={{flexShrink:0}}>
-                        <button ref={btnRef} onClick={handleToggle} disabled={sending}
-                            style={{
-                                display:'flex',alignItems:'center',gap:6,padding:'7px 14px',
-                                borderRadius:9,cursor:sending?'wait':'pointer',fontSize:10,fontWeight:800,
-                                textTransform:'uppercase',letterSpacing:0.8,fontFamily:'Barlow Condensed, sans-serif',
-                                border:'1.5px solid',transition:'all 0.15s',
-                                background: sentTo.length>0?'rgba(16,185,129,0.1)':sending?'rgba(245,158,11,0.1)':'rgba(59,130,246,0.1)',
-                                borderColor: sentTo.length>0?'rgba(16,185,129,0.4)':sending?'rgba(245,158,11,0.4)':'rgba(59,130,246,0.3)',
-                                color: sentTo.length>0?'#10b981':sending?'#f59e0b':'#60a5fa',
-                            }}>
-                            {sending?<><span style={{animation:'pulse 0.8s infinite'}}>⏳</span> Senden...</>
-                            :sentTo.length>0?<>✓ Gesendet ({sentTo.length}) ▼</>
-                            :<>📤 Senden ▼</>}
-                        </button>
-                        {open && btnRect && (
-                            <GroupDropdown kalenderTeams={kalenderTeams} position={btnRect}
-                                onSelect={handleSelect} onClose={()=>setOpen(false)}/>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+function parseCalTypes(calType) {
+  if(!calType||calType==='montage') return ['montage'];
+  if(calType==='both'||calType==='all') return ['montage','beplankung','ausflocken'];
+  if(calType==='beplankung') return ['beplankung'];
+  if(calType==='ausflocken') return ['ausflocken'];
+  try{const a=JSON.parse(calType);if(Array.isArray(a))return a;}catch(e){}
+  return ['montage'];
 }
 
-// ── DAY GROUP ──
-function DayGroup({ group, kalenderTeams, toast, selectMode, selectedIds, onToggleSelect, onSelectAll, onDeselectAll }) {
-    const allSelected = group.entries.length > 0 && group.entries.every(e => selectedIds.has(e._id));
-    const someSelected = group.entries.some(e => selectedIds.has(e._id));
-    const selectedCount = group.entries.filter(e => selectedIds.has(e._id)).length;
-
-    return (
-        <div style={{marginBottom:24}}>
-            <div className="day-header" style={{display:'flex',alignItems:'center',gap:12}}>
-                <div style={{flex:1}}>
-                    <div className="day-name">{group.name}</div>
-                    <div className="day-date">
-                        {group.date ? `${String(group.date.getDate()).padStart(2,'0')}.${String(group.date.getMonth()+1).padStart(2,'0')}.${group.date.getFullYear()}` : ''}
-                        {' — '}{group.entries.length} Aufträge
-                        {selectMode && someSelected && <span style={{color:'#3b82f6',fontWeight:700,marginLeft:8}}>· {selectedCount} markiert</span>}
-                    </div>
-                </div>
-                {selectMode && (
-                    <button onClick={allSelected ? ()=>onDeselectAll(group.entries) : ()=>onSelectAll(group.entries)}
-                        style={{padding:'4px 12px',borderRadius:8,border:'1.5px solid',fontSize:9,fontWeight:800,textTransform:'uppercase',cursor:'pointer',fontFamily:'Barlow Condensed',
-                            background:allSelected?'rgba(59,130,246,0.2)':'rgba(59,130,246,0.06)',
-                            borderColor:allSelected?'#3b82f6':'rgba(59,130,246,0.3)',
-                            color:allSelected?'#60a5fa':'#475569'}}>
-                        {allSelected ? '✓ Alle abwählen' : 'Alle wählen'}
-                    </button>
-                )}
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                {group.entries.map(entry => (
-                    <AuftragRow key={entry._id} entry={entry} kalenderTeams={kalenderTeams}
-                        toast={toast} selectMode={selectMode}
-                        isSelected={selectedIds.has(entry._id)}
-                        onToggleSelect={onToggleSelect}/>
-                ))}
-            </div>
-        </div>
-    );
+function sortPriority(d) {
+  if(d.has_montage && d.termin_fix) return 1;
+  if(d.has_montage) return 2;
+  if(d.termin_fix)  return 3;
+  return 4;
 }
 
-// ── MULTI-SEND MODAL ──
-function MultiSendModal({ entries, kalenderTeams, onClose, onDone, toast }) {
-    const [selectedApp, setSelectedApp] = useState('montage');
-    const [selectedTeam, setSelectedTeam] = useState(null);
-    const [selectedCalType, setSelectedCalType] = useState('montage');
-    const [sending, setSending] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [sentCount, setSentCount] = useState(0);
-    const [done, setDone] = useState(false);
+// ══════════════════════════════════════════════
+// EXCEL PARSE (friend's robust parser)
+// ══════════════════════════════════════════════
+function showOverlay(msg) { const o=document.getElementById('loadOverlay'); o.style.display='flex'; document.getElementById('loadMsg').textContent=msg||'Wird geladen…'; }
+function hideOverlay() { document.getElementById('loadOverlay').style.display='none'; }
 
-    const canSend = selectedApp === 'montage' || !!selectedTeam;
+function onSuffixChange(el) {
+  suffix = el.value.toUpperCase();
+  if (rawRows) processRows(rawRows);
+}
 
-    const handleSend = async () => {
-        setSending(true);
-        let sent = 0;
-        for (const entry of entries) {
-            try {
-                if (selectedApp === 'montage') await sendToMontage(entry, selectedCalType);
-                else await sendToKalender(entry, selectedTeam.id, selectedCalType);
-                sent++;
-                setSentCount(sent);
-                setProgress(Math.round((sent / entries.length) * 100));
-            } catch(err) { console.error(err); }
+function loadExcel(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  showOverlay('Excel wird gelesen…');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      showOverlay('Daten werden verarbeitet…');
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rawRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      let kwLabel = '';
+      try {
+        const vonRow = rawRows.find(r => String(r[0]).includes('Datum von'));
+        const bisRow = rawRows.find(r => String(r[0]).includes('Datum bis'));
+        if (vonRow && bisRow) {
+          const fmtDate = v => {
+            if (v instanceof Date) return v.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
+            return String(v).replace(/(\d{4})\.(\d{2})\.(\d{2})/,'$3.$2.$1');
+          };
+          kwLabel = fmtDate(vonRow[1]) + ' – ' + fmtDate(bisRow[1]);
         }
-        setSending(false);
-        setDone(true);
-        const dest = selectedApp==='montage' ? `PE-Montage URIM` : selectedTeam.name;
-        const ct = CAL_TYPES.find(x=>x.key===selectedCalType);
-        const extraInfo = selectedApp==='montage' ? ' (Kalender + Objekt-Liste)' : '';
-        toast('success', `✅ ${sent}/${entries.length} Aufträge → ${dest} / ${ct?.label||selectedCalType}${extraInfo}`);
-        onDone(sent);
-    };
+      } catch(e){}
 
-    return (
-        <div style={{position:'fixed',inset:0,zIndex:8000,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
-            <div style={{width:'100%',maxWidth:480,background:'#0f172a',border:'1px solid #1e293b',borderRadius:20,overflow:'hidden',boxShadow:'0 40px 80px rgba(0,0,0,0.7)'}}>
-                {/* Header */}
-                <div style={{background:'linear-gradient(135deg,#1a2540,#0f172a)',padding:'20px 24px',borderBottom:'1px solid #1e293b',display:'flex',alignItems:'center',gap:14}}>
-                    <div style={{width:44,height:44,background:'rgba(59,130,246,0.15)',border:'1.5px solid rgba(59,130,246,0.4)',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>📤</div>
-                    <div>
-                        <div style={{color:'#64748b',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:2}}>Auswahl senden</div>
-                        <div style={{color:'#fff',fontSize:22,fontWeight:900,fontFamily:'Barlow Condensed',textTransform:'uppercase',lineHeight:1.1}}>
-                            {entries.length} Aufträge → Kalender
-                        </div>
-                    </div>
-                    <button onClick={onClose} style={{marginLeft:'auto',background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,width:32,height:32,cursor:'pointer',color:'#94a3b8',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
-                </div>
+      const fname = (file.name||'').replace(/\.(xlsx?|xltm)$/i,'');
+      document.getElementById('kwBadge').textContent = fname + (kwLabel ? ' · ' + kwLabel : '');
 
-                <div style={{padding:'20px 24px',display:'flex',flexDirection:'column',gap:16}}>
-                    {done ? (
-                        <div style={{textAlign:'center',padding:'28px 0'}}>
-                            <div style={{fontSize:56,marginBottom:12}}>✅</div>
-                            <div style={{color:'#10b981',fontSize:22,fontWeight:900,fontFamily:'Barlow Condensed',textTransform:'uppercase'}}>{sentCount} Aufträge gesendet!</div>
-                            <div style={{color:'#475569',fontSize:11,marginTop:6}}>
-                                → {selectedApp==='montage'?'PE-Montage URIM':selectedTeam?.name} / {CAL_TYPES.find(x=>x.key===selectedCalType)?.label}
-                                {selectedApp==='montage' && <div style={{color:'#10b981',fontSize:10,marginTop:4}}>✓ Kalender & Objekt-Liste erstellt</div>}
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Auftrags-Vorschau */}
-                            <div style={{background:'rgba(59,130,246,0.05)',border:'1px solid rgba(59,130,246,0.15)',borderRadius:10,padding:'10px 14px',maxHeight:120,overflowY:'auto'}}>
-                                <div style={{color:'#64748b',fontSize:8,fontWeight:800,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>{entries.length} Markierte Aufträge</div>
-                                {entries.map((e,i)=>(
-                                    <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'2px 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                                        <span style={{color:'#60a5fa',fontSize:9,fontWeight:900,minWidth:18}}>{i+1}.</span>
-                                        <span style={{color:'#e2e8f0',fontSize:10,fontWeight:700,textTransform:'uppercase',flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.customer}</span>
-                                        <span style={{color:'#475569',fontSize:9,flexShrink:0}}>{e.date}</span>
-                                    </div>
-                                ))}
-                            </div>
+      processRows(rawRows);
+      hideOverlay();
+    } catch(err) {
+      hideOverlay();
+      console.error(err);
+      alert('Fehler beim Lesen:\n' + err.message);
+    }
+    if (input.value !== undefined) input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
 
-                            {/* App wählen */}
-                            <div>
-                                <div style={{color:'#64748b',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>1. Ziel-App wählen</div>
-                                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                                    {[
-                                        {key:'montage', icon:'🔵', label:'PE-Montage', sub:'URIM · Kalender + Objekt-Liste', color:'#3b82f6', bg:'rgba(59,130,246,0.15)', border:'rgba(59,130,246,0.4)'},
-                                        {key:'kalender', icon:'🟣', label:'PE-Kalender', sub:'Gruppe wählen ↓', color:'#8b5cf6', bg:'rgba(139,92,246,0.15)', border:'rgba(139,92,246,0.4)'},
-                                    ].map(opt=>(
-                                        <button key={opt.key} onClick={()=>{setSelectedApp(opt.key);if(opt.key==='montage')setSelectedTeam(null);}}
-                                            style={{padding:'12px 10px',borderRadius:12,border:'2px solid',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'Barlow Condensed',textTransform:'uppercase',transition:'all 0.15s',textAlign:'center',
-                                                background:selectedApp===opt.key?opt.bg:'rgba(255,255,255,0.03)',
-                                                borderColor:selectedApp===opt.key?opt.color:'#1e293b',
-                                                color:selectedApp===opt.key?opt.color:'#475569'}}>
-                                            <div style={{fontSize:18,marginBottom:3}}>{opt.icon}</div>
-                                            <div>{opt.label}</div>
-                                            <div style={{fontSize:8,fontWeight:600,opacity:0.7,marginTop:2}}>{opt.sub}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+function processRows(rows) {
+  // Find header row dynamically (friend's method)
+  let headerIdx = rows.findIndex(r => r.some(c => String(c).includes('Lieferdatum')));
+  if (headerIdx < 0) headerIdx = 6;
+  const dataRows = rows.slice(headerIdx + 1);
 
-                            {/* Gruppe wählen */}
-                            {selectedApp==='kalender' && (
-                                <div>
-                                    <div style={{color:'#64748b',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>2. Gruppe wählen</div>
-                                    <div style={{display:'flex',flexDirection:'column',gap:4,maxHeight:150,overflowY:'auto',paddingRight:4}}>
-                                        {kalenderTeams.map(t=>(
-                                            <div key={t.id} onClick={()=>setSelectedTeam(t)}
-                                                style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:9,cursor:'pointer',border:'1.5px solid',transition:'all 0.15s',
-                                                    background:selectedTeam?.id===t.id?'rgba(139,92,246,0.12)':'rgba(255,255,255,0.03)',
-                                                    borderColor:selectedTeam?.id===t.id?'#8b5cf6':'#1e293b'}}>
-                                                <div style={{width:10,height:10,borderRadius:'50%',background:t.color||'#3b82f6',flexShrink:0}}></div>
-                                                <span style={{color:'#fff',fontSize:13,fontWeight:800,fontFamily:'Barlow Condensed',textTransform:'uppercase',flex:1}}>{t.name}</span>
-                                                <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                                                    {parseCalTypes(t.calType).map(ct=>{
-                                                        const c=CAL_TYPES.find(x=>x.key===ct);
-                                                        return c?<span key={ct} style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:3,background:c.bg,color:c.color,border:`1px solid ${c.border}`}}>{c.icon}</span>:null;
-                                                    })}
-                                                </div>
-                                                {selectedTeam?.id===t.id&&<span style={{color:'#8b5cf6',fontWeight:900,fontSize:14}}>✓</span>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+  const parsed = [];
+  const dayMap = {};
 
-                            {/* Kalender-Typ */}
-                            <div>
-                                <div style={{color:'#64748b',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>
-                                    {selectedApp==='kalender'?'3.':'2.'} Kalender-Typ
-                                </div>
-                                <div style={{display:'flex',gap:8}}>
-                                    {CAL_TYPES.map(ct=>(
-                                        <button key={ct.key} onClick={()=>setSelectedCalType(ct.key)}
-                                            style={{flex:1,padding:'10px 4px',borderRadius:10,border:'2px solid',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'Barlow Condensed',textTransform:'uppercase',transition:'all 0.15s',textAlign:'center',
-                                                background:selectedCalType===ct.key?ct.bg:'rgba(255,255,255,0.03)',
-                                                borderColor:selectedCalType===ct.key?ct.color:'#1e293b',
-                                                color:selectedCalType===ct.key?ct.color:'#475569'}}>
-                                            <div style={{fontSize:16,marginBottom:2}}>{ct.icon}</div>
-                                            <div style={{fontSize:9}}>{ct.label}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+  dataRows.forEach(row => {
+    let rawDate = row[0];
+    if (!rawDate) return;
+    let dateObj;
+    if (rawDate instanceof Date) {
+      dateObj = rawDate;
+    } else {
+      const s = String(rawDate).trim();
+      if (/^\d{4}\.\d{2}\.\d{2}$/.test(s)) {
+        dateObj = new Date(s.replace(/(\d{4})\.(\d{2})\.(\d{2})/, '$1-$2-$3'));
+      } else if (/^\d{5}$/.test(s)) {
+        dateObj = new Date((parseInt(s) - 25569) * 86400000);
+      } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        dateObj = new Date(s);
+      } else {
+        return;
+      }
+    }
+    if (!dateObj || isNaN(dateObj.getTime())) return;
 
-                            {/* Progress */}
-                            {sending && (
-                                <div>
-                                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
-                                        <span style={{color:'#94a3b8',fontSize:10}}>Sende... {sentCount}/{entries.length}</span>
-                                        <span style={{color:'#60a5fa',fontSize:10,fontWeight:700}}>{progress}%</span>
-                                    </div>
-                                    <div className="progress-bar"><div className="progress-fill" style={{width:`${progress}%`}}></div></div>
-                                </div>
-                            )}
+    const datum = toLocalDateStr(dateObj);
+    const shortDate = dateObj.toLocaleDateString('de-CH', {weekday:'short', day:'2-digit', month:'2-digit'});
+    if (!dayMap[datum]) dayMap[datum] = shortDate;
 
-                            <div style={{display:'flex',gap:10,marginTop:4}}>
-                                <button onClick={onClose} style={{flex:1,padding:'12px',background:'transparent',border:'1px solid #1e293b',borderRadius:12,color:'#64748b',fontWeight:800,fontSize:10,textTransform:'uppercase',cursor:'pointer',fontFamily:'Barlow Condensed'}}>Abbrechen</button>
-                                <button onClick={handleSend} disabled={!canSend||sending}
-                                    style={{flex:2,padding:'12px',borderRadius:12,border:'none',fontWeight:800,fontSize:10,textTransform:'uppercase',fontFamily:'Barlow Condensed',cursor:canSend&&!sending?'pointer':'not-allowed',
-                                        background:canSend&&!sending?'linear-gradient(135deg,#3b82f6,#6366f1)':'#1e293b',
-                                        color:canSend&&!sending?'#fff':'#475569'}}>
-                                    {sending?`⏳ ${progress}% ...`:`📤 ${entries.length} AUFTRÄGE SENDEN`}
-                                </button>
-                            </div>
-                        </>
-                    )}
-                    {done && <button onClick={onClose} style={{width:'100%',padding:'12px',background:'#10b981',border:'none',borderRadius:12,color:'#fff',fontWeight:800,fontSize:10,textTransform:'uppercase',cursor:'pointer',fontFamily:'Barlow Condensed'}}>✓ FERTIG</button>}
-                </div>
-            </div>
+    const memo1 = String(row[1]||'').replace(/\n/g,' ').trim();
+    const memo2 = String(row[2]||'').replace(/\n/g,' ').trim();
+    const combined = (memo1 + ' ' + memo2).toLowerCase();
+
+    const kunde    = String(row[4]||'').trim();
+    const projekt  = String(row[5]||'').trim();
+    const strasse  = String(row[9]||'').trim();
+    const plz      = String(row[7]||'').trim();
+    const ort      = String(row[8]||'').trim();
+    const auftrag  = String(row[3]||'').trim();
+    const ele      = String(row[9]||row[6]||'').trim();
+
+    // ELE extraction from memo
+    const eleMatch = combined.match(/(\d+)\s*ele/i);
+    const eleNum   = eleMatch ? parseInt(eleMatch[1]) : 0;
+
+    // Address
+    const adresse = strasse ? `${strasse}, ${plz} ${ort}`.replace(/^,|,\s*$/,'').trim()
+                             : [plz, ort].filter(Boolean).join(' ');
+
+    const memo = [memo2, memo1].filter(Boolean).join(' · ').slice(0, 140);
+
+    parsed.push({
+      _id:      genId(),
+      datum,
+      auftrag,
+      auftragsNr: auftrag ? `${auftrag}/${suffix}` : '',
+      kunde,
+      projekt,
+      address:  adresse,
+      customer: kunde,
+      plz,
+      ort,
+      ele,
+      eleNum,
+      has_montage: combined.includes('montage'),
+      termin_fix:  combined.includes('fix'),
+      memo,
+      target: eleNum,
+      date:   datum,
+      sentTo: [],  // [{label, color}]
+    });
+  });
+
+  if (parsed.length === 0) {
+    hideOverlay();
+    alert('Keine Daten gefunden. Bitte Dateiformat prüfen.');
+    return;
+  }
+
+  Object.keys(DAYS).forEach(k => delete DAYS[k]);
+  Object.entries(dayMap).sort().forEach(([d,l]) => DAYS[d] = l);
+
+  state = parsed;
+  sentAuftragIds = new Set();
+  selectedIds = new Set();
+  selectMode = false;
+  activeDay = 'all';
+  typeFilter = 'all';
+  document.getElementById('search').value = '';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('btnSendAll').style.display = 'inline-flex';
+  document.getElementById('btnExport').style.display = 'inline-block';
+  updateKPIs();
+  render();
+}
+
+// ══════════════════════════════════════════════
+// KPIs
+// ══════════════════════════════════════════════
+function updateKPIs() {
+  const mont = state.filter(d=>d.has_montage).length;
+  const fix  = state.filter(d=>d.termin_fix).length;
+  const sent = state.filter(d=>d.sentTo && d.sentTo.length>0).length;
+  document.getElementById('s-total').textContent   = state.length;
+  document.getElementById('s-montage').textContent = mont;
+  document.getElementById('s-fix').textContent     = fix;
+  document.getElementById('s-sent').textContent    = sent;
+  document.getElementById('cnt-all').textContent   = state.length;
+  document.getElementById('cnt-montage').textContent = mont;
+  document.getElementById('cnt-fix').textContent   = fix;
+  document.getElementById('cnt-notsent').textContent = state.filter(d=>!d.sentTo||d.sentTo.length===0).length;
+}
+
+// ══════════════════════════════════════════════
+// FILTER
+// ══════════════════════════════════════════════
+function getFiltered() {
+  const q = document.getElementById('search').value.toLowerCase();
+  return state.filter(d => {
+    if (activeDay !== 'all' && d.datum !== activeDay) return false;
+    if (typeFilter === 'montage'  && !d.has_montage) return false;
+    if (typeFilter === 'fix'      && !d.termin_fix)  return false;
+    if (typeFilter === 'notsent'  && d.sentTo && d.sentTo.length>0) return false;
+    if (q && !d.kunde.toLowerCase().includes(q)
+           && !d.ort.toLowerCase().includes(q)
+           && !(d.auftrag||'').includes(q)
+           && !(d.projekt||'').toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b) => {
+    if (a.datum !== b.datum) return a.datum.localeCompare(b.datum);
+    return sortPriority(a) - sortPriority(b);
+  });
+}
+
+function setDayFilter(d) {
+  activeDay = activeDay === d ? 'all' : d;
+  document.querySelectorAll('.day-pill').forEach(el => el.classList.toggle('active', el.dataset.day === activeDay));
+  render();
+}
+function setTypeFilter(f, el) {
+  typeFilter = f;
+  document.querySelectorAll('.type-filter').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+function setView(v) {
+  currentView = v;
+  document.getElementById('listView').style.display  = v === 'list' ? 'block' : 'none';
+  document.getElementById('dayView').classList.toggle('active', v === 'day');
+  document.getElementById('btn-list').classList.toggle('active', v === 'list');
+  document.getElementById('btn-day').classList.toggle('active',  v === 'day');
+  render();
+}
+
+// ══════════════════════════════════════════════
+// SELECT MODE
+// ══════════════════════════════════════════════
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  selectedIds = new Set();
+  const btn = document.getElementById('selModeBtn');
+  btn.classList.toggle('active', selectMode);
+  btn.textContent = selectMode ? '✕ Abbrechen' : '☑ Auswählen';
+  document.getElementById('th-cb').style.display = selectMode ? 'table-cell' : 'none';
+  document.getElementById('selBar').style.display = 'none';
+  render();
+}
+function toggleSelect(id) {
+  selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
+  updateSelBar();
+  // Only update the affected row in-place, no full re-render
+  const tr = document.querySelector(`tr[data-row-id="${id}"]`);
+  if (tr) {
+    const isNowSelected = selectedIds.has(id);
+    tr.classList.toggle('selected-row', isNowSelected);
+    const cb = tr.querySelector('.cb');
+    if (cb) cb.classList.toggle('checked', isNowSelected);
+  }
+}
+function clearSelection() {
+  selectedIds = new Set();
+  updateSelBar();
+  document.querySelectorAll('tr.selected-row').forEach(tr => {
+    tr.classList.remove('selected-row');
+    const cb = tr.querySelector('.cb');
+    if (cb) cb.classList.remove('checked');
+  });
+}
+function selectAllVisible() {
+  getFiltered().forEach(d => selectedIds.add(d._id));
+  updateSelBar();
+  // Update all visible rows in-place
+  document.querySelectorAll('tr[data-row-id]').forEach(tr => {
+    const id = tr.dataset.rowId;
+    if (selectedIds.has(id)) {
+      tr.classList.add('selected-row');
+      const cb = tr.querySelector('.cb');
+      if (cb) cb.classList.add('checked');
+    }
+  });
+}
+function updateSelBar() {
+  const bar = document.getElementById('selBar');
+  const cnt = selectedIds.size;
+  bar.style.display = (selectMode && cnt > 0) ? 'flex' : 'none';
+  document.getElementById('selBarCnt').textContent = cnt;
+  document.getElementById('selBarLabel').textContent = cnt + ' Aufträge markiert';
+}
+
+// ══════════════════════════════════════════════
+// SEND FUNCTIONS (Firebase)
+// ══════════════════════════════════════════════
+async function sendToMontage(entry, calType) {
+  if (!window._dbMontage) throw new Error('PE-Montage Firebase nicht verbunden');
+  const calId = `cal-${genId()}`;
+  await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/calentries').doc(calId).set({
+    id:calId, createdAt:new Date().toISOString(), isDone:false, isBilled:false,
+    entryType:'LIEFERUNG', customer:entry.customer||'', address:entry.address||'',
+    memo:entry.memo||'', auftragsNr:cleanAuftragsNr(entry.auftragsNr||''),
+    target:entry.target||0, images:[], image:null, deliveryDate:entry.date||'',
+    endDate:null, isMultiDay:false, calType:calType||'montage', isProv:false, customStartLabel:'',
+  });
+  const memo = entry.memo || '';
+  const houseInfo = memo.replace(/\d+\s*ELE/gi,'').replace(/\bGIS\b/gi,'').replace(/[-–]\s*$/,'').trim() || 'Gesamtmontage';
+  const objId = `obj-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+  await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/objects').doc(objId).set({
+    id:objId, name:entry.address||'', customer:entry.customer||'', address:entry.address||'',
+    houseInfo, auftragsNr:cleanAuftragsNr(entry.auftragsNr||''), target:entry.target||0,
+    current:0, lastRemaining:null, blockReason:null,
+    deliveryDate:entry.date ? new Date(entry.date).toISOString() : new Date().toISOString(),
+    status:'active', history:[],
+  });
+  return calId;
+}
+
+async function sendToKalender(entry, teamId, calType) {
+  if (!window._dbKalender) throw new Error('PE-Kalender Firebase nicht verbunden');
+  const id = `cal-${genId()}`;
+  await window._dbKalender.collection(`teams_cal_${teamId}`).doc(id).set({
+    id, createdAt:new Date().toISOString(), isDone:false, isBilled:false,
+    entryType:'LIEFERUNG', customer:entry.customer||'', address:entry.address||'',
+    memo:entry.memo||'', auftragsNr:cleanAuftragsNr(entry.auftragsNr||''),
+    target:entry.target||0, images:[], image:null, deliveryDate:entry.date||'',
+    endDate:null, isMultiDay:false, calType:calType||'montage', isProv:false, customStartLabel:'',
+  });
+  return id;
+}
+
+// ══════════════════════════════════════════════
+// PER-ROW SEND DROPDOWN
+// ══════════════════════════════════════════════
+let openDropdownId = null;
+let openDropdownCleanup = null;
+
+function closeDrop() {
+  const el = document.getElementById('activeDropdown');
+  if (el) el.remove();
+  if (openDropdownCleanup) { openDropdownCleanup(); openDropdownCleanup = null; }
+  openDropdownId = null;
+}
+
+function openSendDrop(entryId, btnEl) {
+  if (openDropdownId === entryId) { closeDrop(); return; }
+  closeDrop();
+  openDropdownId = entryId;
+
+  const rect = btnEl.getBoundingClientRect();
+  const drop = document.createElement('div');
+  drop.id = 'activeDropdown';
+  drop.className = 'grp-dropdown';
+
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const openUp = spaceBelow < 350;
+  drop.style.top    = openUp ? 'auto' : (rect.bottom + 4) + 'px';
+  drop.style.bottom = openUp ? (window.innerHeight - rect.top + 4) + 'px' : 'auto';
+  drop.style.left   = Math.min(rect.right - 260, window.innerWidth - 270) + 'px';
+
+  let html = `<div class="grp-drop-section">🔵 PE-MONTAGE — Kalender + Objekt-Liste</div>`;
+  CAL_TYPES.forEach(ct => {
+    html += `<div class="grp-drop-item" onclick="doSendRow('${entryId}','montage',null,'${ct.key}')" style="border-left:3px solid ${ct.color}">
+      <div class="grp-drop-dot" style="background:${ct.color}"></div>
+      <span style="flex:1"><b>URIM</b> <span style="color:#475569;font-size:9px">PE-Montage</span></span>
+      <span class="ct-badge" style="background:${ct.bg};color:${ct.color};border:1px solid ${ct.border}">${ct.icon} ${ct.label}</span>
+    </div>`;
+  });
+  html += `<div class="grp-divider"></div><div class="grp-drop-section">🟣 PE-KALENDER GRUPPEN</div>`;
+  if (kalenderTeams.length === 0) {
+    html += `<div style="padding:8px 10px;color:#475569;font-size:10px">Keine Gruppen verfügbar</div>`;
+  } else {
+    kalenderTeams.forEach(team => {
+      parseCalTypes(team.calType).forEach(ct => {
+        const ctCfg = CAL_TYPES.find(x=>x.key===ct) || CAL_TYPES[0];
+        html += `<div class="grp-drop-item" onclick="doSendRow('${entryId}','kalender','${team.id}','${ct}')" style="border-left:3px solid ${team.color||ctCfg.color}">
+          <div class="grp-drop-dot" style="background:${team.color||ctCfg.color}"></div>
+          <span style="flex:1;font-weight:900">${team.name}</span>
+          <span class="ct-badge" style="background:${ctCfg.bg};color:${ctCfg.color};border:1px solid ${ctCfg.border}">${ctCfg.icon} ${ctCfg.label}</span>
+        </div>`;
+      });
+    });
+  }
+  drop.innerHTML = html;
+  document.body.appendChild(drop);
+
+  const onClickOutside = (e) => { if (!drop.contains(e.target) && e.target !== btnEl) closeDrop(); };
+  const onScroll = () => closeDrop();
+  setTimeout(() => document.addEventListener('mousedown', onClickOutside), 0);
+  window.addEventListener('scroll', onScroll, true);
+  openDropdownCleanup = () => { document.removeEventListener('mousedown', onClickOutside); window.removeEventListener('scroll', onScroll, true); };
+}
+
+async function doSendRow(entryId, app, teamId, calType) {
+  closeDrop();
+  const entry = state.find(d => d._id === entryId);
+  if (!entry) return;
+
+  // Mark as sending in DOM
+  const btn = document.querySelector(`[data-send-id="${entryId}"]`);
+  if (btn) { btn.className = 'send-btn sending'; btn.textContent = '⏳ Sende…'; btn.disabled = true; }
+
+  try {
+    if (app === 'montage') {
+      await sendToMontage(entry, calType);
+      const ct = CAL_TYPES.find(x=>x.key===calType);
+      entry.sentTo.push({label:`URIM / ${ct?.label||calType}`, color:ct?.color||'#10b981'});
+      showToast('success', `✅ → PE-Montage URIM / ${ct?.label||calType}`);
+    } else {
+      const team = kalenderTeams.find(t=>t.id===teamId);
+      await sendToKalender(entry, teamId, calType);
+      const ct = CAL_TYPES.find(x=>x.key===calType);
+      entry.sentTo.push({label:`${team?.name||teamId} / ${ct?.label||calType}`, color:team?.color||ct?.color||'#10b981'});
+      showToast('success', `✅ → ${team?.name||teamId} / ${ct?.label||calType}`);
+    }
+    updateKPIs();
+    render();
+  } catch(err) {
+    showToast('error', `❌ ${err.message}`);
+    if (btn) { btn.className = 'send-btn idle'; btn.textContent = '📤 Senden'; btn.disabled = false; }
+  }
+}
+
+// ══════════════════════════════════════════════
+// MULTI SEND MODAL
+// ══════════════════════════════════════════════
+let modalApp = 'montage';
+let modalTeam = null;
+let modalCalType = 'montage';
+
+function openSendAll() {
+  modalEntries = [...state];
+  showModal();
+}
+function openMultiSend() {
+  modalEntries = state.filter(d => selectedIds.has(d._id));
+  if (!modalEntries.length) return;
+  showModal();
+}
+function closeModal() {
+  document.getElementById('multiSendModal').style.display = 'none';
+  modalEntries = [];
+}
+
+function showModal() {
+  modalApp = 'montage'; modalTeam = null; modalCalType = 'montage';
+  document.getElementById('modalTitle').textContent = `${modalEntries.length} Aufträge → Kalender`;
+  document.getElementById('multiSendModal').style.display = 'flex';
+  renderModalBody(false, 0, false);
+}
+
+function renderModalBody(sending, progress, done, sentCount) {
+  const body = document.getElementById('modalBody');
+  if (done) {
+    body.innerHTML = `
+      <div class="modal-done-state">
+        <div style="font-size:48px;margin-bottom:10px">✅</div>
+        <div style="color:var(--montage);font-size:22px;font-weight:900;font-family:var(--cond);text-transform:uppercase">${sentCount} Aufträge gesendet!</div>
+        <div style="color:var(--text3);font-size:11px;margin-top:6px">
+          → ${modalApp==='montage'?'PE-Montage URIM':modalTeam?.name} / ${CAL_TYPES.find(x=>x.key===modalCalType)?.label}
+          ${modalApp==='montage'?'<div style="color:var(--montage);margin-top:4px;font-size:10px">✓ Kalender & Objekt-Liste erstellt</div>':''}
         </div>
-    );
+      </div>
+      <button class="modal-cancel" style="background:var(--montage);color:#0f0f0f;border-color:var(--montage)" onclick="closeModal()">✓ FERTIG</button>
+    `;
+    return;
+  }
+
+  // Preview list
+  const previewItems = modalEntries.slice(0,8).map((e,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+      <span style="color:var(--blue);font-size:9px;font-family:var(--mono);min-width:18px">${i+1}.</span>
+      <span style="color:var(--text);font-size:11px;font-weight:600;text-transform:uppercase;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.kunde}</span>
+      <span style="color:var(--text3);font-size:9px;font-family:var(--mono)">${e.datum}</span>
+    </div>
+  `).join('');
+  const extra = modalEntries.length > 8 ? `<div style="color:var(--text3);font-size:10px;padding:4px 0">+ ${modalEntries.length-8} weitere…</div>` : '';
+
+  const appBtns = [
+    {key:'montage', icon:'🔵', label:'PE-Montage', sub:'URIM · Kalender+Objekte', color:'#3b82f6', bg:'rgba(59,130,246,.15)', border:'rgba(59,130,246,.4)'},
+    {key:'kalender', icon:'🟣', label:'PE-Kalender', sub:'Gruppe wählen ↓', color:'#8b5cf6', bg:'rgba(139,92,246,.15)', border:'rgba(139,92,246,.4)'},
+  ].map(opt => `
+    <button class="app-btn" onclick="modalSetApp('${opt.key}')"
+      style="background:${modalApp===opt.key?opt.bg:'rgba(255,255,255,.03)'};border-color:${modalApp===opt.key?opt.color:'#1e293b'};color:${modalApp===opt.key?opt.color:'#475569'}">
+      <div class="app-btn-icon">${opt.icon}</div>
+      <div>${opt.label}</div>
+      <div class="app-btn-sub">${opt.sub}</div>
+    </button>
+  `).join('');
+
+  const teamsList = modalApp==='kalender' ? `
+    <div>
+      <div class="modal-section-label">${modalApp==='kalender'?'2.':'—'} Gruppe wählen</div>
+      <div class="teams-list">
+        ${kalenderTeams.map(t=>`
+          <div class="team-opt" onclick="modalSetTeam('${t.id}')"
+            style="background:${modalTeam?.id===t.id?'rgba(139,92,246,.1)':'rgba(255,255,255,.03)'};border-color:${modalTeam?.id===t.id?'#8b5cf6':'#1e293b'}">
+            <div class="team-opt-dot" style="background:${t.color||'#3b82f6'}"></div>
+            <span class="team-opt-name">${t.name}</span>
+            ${modalTeam?.id===t.id?'<span style="color:#8b5cf6;font-weight:900">✓</span>':''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  const ctBtns = CAL_TYPES.map(ct=>`
+    <button class="ct-btn" onclick="modalSetCalType('${ct.key}')"
+      style="background:${modalCalType===ct.key?ct.bg:'rgba(255,255,255,.03)'};border-color:${modalCalType===ct.key?ct.color:'#1e293b'};color:${modalCalType===ct.key?ct.color:'#475569'}">
+      <div style="font-size:16px;margin-bottom:2px">${ct.icon}</div>
+      <div>${ct.label}</div>
+    </button>
+  `).join('');
+
+  const canSend = modalApp==='montage' || !!modalTeam;
+  const progHtml = sending ? `
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="color:var(--text2);font-size:10px">Sende… ${sentCount||0}/${modalEntries.length}</span>
+        <span style="color:var(--blue);font-size:10px;font-weight:700">${progress}%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
+    </div>
+  ` : '';
+
+  body.innerHTML = `
+    <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:9px;padding:10px 12px;max-height:110px;overflow-y:auto">
+      <div style="color:var(--text3);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:5px">${modalEntries.length} Markierte Aufträge</div>
+      ${previewItems}${extra}
+    </div>
+    <div>
+      <div class="modal-section-label">1. Ziel-App wählen</div>
+      <div class="app-grid">${appBtns}</div>
+    </div>
+    ${teamsList}
+    <div>
+      <div class="modal-section-label">${modalApp==='kalender'?'3.':'2.'} Kalender-Typ</div>
+      <div class="ct-grid">${ctBtns}</div>
+    </div>
+    ${progHtml}
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Abbrechen</button>
+      <button class="modal-send ${canSend&&!sending?'ready':'disabled'}" onclick="${canSend&&!sending?'runModalSend()':''}">
+        ${sending?`⏳ ${progress}% …`:`📤 ${modalEntries.length} AUFTRÄGE SENDEN`}
+      </button>
+    </div>
+  `;
 }
 
-// ── SEND-ALL MODAL ──
-function SendAllModal({ groups, kalenderTeams, onClose, toast }) {
-    const allEntries = groups.flatMap(g => g.entries);
-    return <MultiSendModal entries={allEntries} kalenderTeams={kalenderTeams} onClose={onClose} toast={toast} onDone={()=>{}} />;
+function modalSetApp(app) { modalApp = app; if(app==='montage') modalTeam=null; renderModalBody(false,0,false); }
+function modalSetTeam(id) { modalTeam = kalenderTeams.find(t=>t.id===id)||null; renderModalBody(false,0,false); }
+function modalSetCalType(ct) { modalCalType = ct; renderModalBody(false,0,false); }
+
+async function runModalSend() {
+  let sent = 0;
+  for (let i = 0; i < modalEntries.length; i++) {
+    const entry = modalEntries[i];
+    renderModalBody(true, Math.round((i/modalEntries.length)*100), false, sent);
+    try {
+      if (modalApp === 'montage') await sendToMontage(entry, modalCalType);
+      else await sendToKalender(entry, modalTeam.id, modalCalType);
+      const ct = CAL_TYPES.find(x=>x.key===modalCalType);
+      const label = modalApp==='montage' ? `URIM / ${ct?.label||modalCalType}` : `${modalTeam?.name} / ${ct?.label||modalCalType}`;
+      const color = modalApp==='montage' ? ct?.color||'#10b981' : modalTeam?.color||ct?.color||'#10b981';
+      // Find in state and update
+      const si = state.findIndex(d=>d._id===entry._id);
+      if (si>=0) state[si].sentTo.push({label, color});
+      sent++;
+    } catch(err) { console.error(err); }
+  }
+  renderModalBody(false, 100, true, sent);
+  const dest = modalApp==='montage' ? 'PE-Montage URIM' : modalTeam?.name;
+  const ct = CAL_TYPES.find(x=>x.key===modalCalType);
+  showToast('success', `✅ ${sent}/${modalEntries.length} → ${dest} / ${ct?.label||modalCalType}`);
+  updateKPIs();
+  // Full re-render needed here since sent-badges changed
+  if (selectMode) {
+    selectedIds = new Set();
+    selectMode = false;
+    const btn = document.getElementById('selModeBtn');
+    btn.classList.remove('active');
+    btn.textContent = '☑ Auswählen';
+    document.getElementById('selBar').style.display = 'none';
+  }
+  render();
 }
 
-// ── MAIN APP ──
-function App() {
-    const [suffix, setSuffix] = useState('SLI');
-    const [rawRows, setRawRows] = useState(null);
-    const [groups, setGroups] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [kalenderTeams, setKalenderTeams] = useState([]);
-    const [toast, setToastMsg] = useState(null);
-    const [showSendAll, setShowSendAll] = useState(false);
-    const [selectMode, setSelectMode] = useState(false);
-    const [selectedIds, setSelectedIds] = useState(new Set());
-    const [showMultiSend, setShowMultiSend] = useState(false);
-    const fileRef = useRef(null);
+// ══════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════
+function showToast(type, msg) {
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span style="font-size:18px">${type==='success'?'✅':'❌'}</span><div style="color:#fff;font-size:12px;font-weight:600">${msg}</div>`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
 
-    useEffect(() => {
-        if (!window._dbKalender) return;
-        const unsub = window._dbKalender.collection('teams_config').onSnapshot(snap => {
-            setKalenderTeams(snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||'')));
-        }, err=>console.error(err));
-        return ()=>unsub();
-    }, []);
+// ══════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════
+function render() {
+  if (!state.length) return;
+  renderSidebar();
+  if (currentView === 'list') renderList();
+  else renderDayView();
+}
 
-    const showToast = (type, msg) => setToastMsg({ type, msg, id: Date.now() });
-
-    const processExcelData = (rows, currentSuffix) => {
-        if (rows.length < 5) { setError('Datei enthält zu wenig Daten.'); setLoading(false); return; }
-        let colMap = { date:0, memo:2, order:3, customer:4, street:9, zip:10, city:11 };
-        for (let i=0; i<Math.min(rows.length,15); i++) {
-            const row=rows[i]; if(!row) continue;
-            row.forEach((cell,idx)=>{
-                const val=String(cell).toLowerCase().trim();
-                if(val.includes('datum')) colMap.date=idx;
-                if(val==='memo') colMap.memo=idx;
-                if(val==='auftrag') colMap.order=idx;
-                if(val==='kunde') colMap.customer=idx;
-                if(val==='strasse') colMap.street=idx;
-                if(val==='plz') colMap.zip=idx;
-                if(val==='ort') colMap.city=idx;
-            });
-        }
-        const deliveryGroups = {
-            1:{name:'Montag',entries:[],date:null}, 2:{name:'Dienstag',entries:[],date:null},
-            3:{name:'Mittwoch',entries:[],date:null}, 4:{name:'Donnerstag',entries:[],date:null},
-            5:{name:'Freitag',entries:[],date:null}, 6:{name:'Samstag',entries:[],date:null},
-        };
-        for (let i=9; i<rows.length; i++) {
-            const row=rows[i]; if(!row||row.length<2) continue;
-            const rawDate=row[colMap.date]; if(!rawDate) continue;
-            const date=typeof rawDate==='number'?excelDateToJSDate(rawDate):new Date(rawDate);
-            if(isNaN(date.getTime())) continue;
-            const dow=date.getDay(); if(!deliveryGroups[dow]) continue;
-            if(!deliveryGroups[dow].date) deliveryGroups[dow].date=date;
-            const kunde=String(row[colMap.customer]||'').trim();
-            const strasse=String(row[colMap.street]||'').trim();
-            const plz=String(row[colMap.zip]||'').trim();
-            const ort=String(row[colMap.city]||'').trim();
-            const memo=String(row[colMap.memo]||'').trim().replace(/\r?\n|\r/g,' ');
-            const auftrag=String(row[colMap.order]||'').trim();
-            const adresse=(strasse||plz||ort)?`${strasse}, ${plz} ${ort}`.trim().replace(/^,|,\s*$/,''):'';
-            const eleMatch=memo.match(/(\d+)\s*ELE/i);
-            deliveryGroups[dow].entries.push({
-                _id:genId(), customer:kunde, address:adresse, memo,
-                auftragsNr:`${auftrag}/${currentSuffix}`, target:eleMatch?parseInt(eleMatch[1]):0,
-                date:toLocalDateStr(date),
-            });
-        }
-        setGroups([1,2,3,4,5,6].map(d=>deliveryGroups[d]).filter(g=>g.entries.length>0));
-        setLoading(false);
-    };
-
-    useEffect(()=>{ if(rawRows) processExcelData(rawRows,suffix); }, [suffix]);
-
-    const handleFile = (e) => {
-        const file=e.target.files[0]; if(!file) return;
-        setLoading(true); setError(null);
-        const reader=new FileReader();
-        reader.onload=(evt)=>{
-            try {
-                const wb=XLSX.read(evt.target.result,{type:'binary'});
-                const ws=wb.Sheets[wb.SheetNames[0]];
-                const jsonData=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-                setRawRows(jsonData); processExcelData(jsonData,suffix);
-            } catch(err) { setError('Fehler beim Verarbeiten der Datei.'); setLoading(false); }
-        };
-        reader.readAsBinaryString(file);
-    };
-
-    const toggleSelectMode = () => {
-        setSelectMode(s => !s);
-        setSelectedIds(new Set());
-    };
-    const toggleSelect = (id) => setSelectedIds(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n;});
-    const selectAll = (entries) => setSelectedIds(prev=>{const n=new Set(prev);entries.forEach(e=>n.add(e._id));return n;});
-    const deselectAll = (entries) => setSelectedIds(prev=>{const n=new Set(prev);entries.forEach(e=>n.delete(e._id));return n;});
-    const selectAllEverything = () => setSelectedIds(new Set(groups.flatMap(g=>g.entries.map(e=>e._id))));
-    const clearSelection = () => setSelectedIds(new Set());
-
-    const selectedEntries = useMemo(()=>groups.flatMap(g=>g.entries).filter(e=>selectedIds.has(e._id)), [groups, selectedIds]);
-    const totalEntries = groups.reduce((s,g)=>s+g.entries.length, 0);
-
-    return (
-        <div style={{minHeight:'100vh',background:'#0a0f1a'}}>
-            {/* HEADER */}
-            <div style={{background:'linear-gradient(180deg,#0f172a,#0a0f1a)',borderBottom:'1px solid #1e293b',padding:'16px 32px',position:'sticky',top:0,zIndex:50}}>
-                <div style={{maxWidth:1200,margin:'0 auto',display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
-                    <div>
-                        <h1 style={{margin:0,fontSize:26,fontFamily:'Barlow Condensed',fontWeight:900,textTransform:'uppercase',letterSpacing:2,color:'#fff',lineHeight:1}}>TOURENDISPO</h1>
-                        <div style={{color:'#3b82f6',fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',marginTop:2}}>PROZESSOR v2 — MULTI-KALENDER</div>
-                    </div>
-                    <div style={{display:'flex',gap:6,marginLeft:'auto'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(16,185,129,0.08)',border:'1px solid rgba(16,185,129,0.2)',borderRadius:20,padding:'3px 10px'}}>
-                            <div style={{width:5,height:5,borderRadius:'50%',background:window._dbMontage?'#10b981':'#ef4444'}}></div>
-                            <span style={{color:'#10b981',fontSize:9,fontWeight:700}}>PE-MONTAGE</span>
-                        </div>
-                        <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(99,102,241,0.08)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:20,padding:'3px 10px'}}>
-                            <div style={{width:5,height:5,borderRadius:'50%',background:window._dbKalender?'#6366f1':'#ef4444'}}></div>
-                            <span style={{color:'#a5b4fc',fontSize:9,fontWeight:700}}>PE-KALENDER ({kalenderTeams.length})</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div style={{maxWidth:1200,margin:'0 auto',padding:'24px 32px'}}>
-                {/* CONTROLS */}
-                <div style={{display:'grid',gridTemplateColumns:'180px 1fr auto auto',gap:12,marginBottom:20,alignItems:'end'}}>
-                    <div>
-                        <div style={{color:'#64748b',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Kennzeichen</div>
-                        <input type="text" value={suffix} onChange={e=>setSuffix(e.target.value.toUpperCase())} placeholder="SLI"
-                            style={{width:'100%',padding:'10px 14px',background:'#111827',border:'1.5px solid #1f2937',borderRadius:10,color:'#fff',fontSize:14,fontWeight:700,textTransform:'uppercase',letterSpacing:2,outline:'none'}}/>
-                    </div>
-                    <div>
-                        <div style={{color:'#64748b',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Excel Datei</div>
-                        <button onClick={()=>fileRef.current.click()}
-                            style={{width:'100%',padding:'10px 20px',background:'linear-gradient(135deg,#1d4ed8,#4f46e5)',border:'none',borderRadius:10,color:'#fff',fontSize:12,fontWeight:800,textTransform:'uppercase',letterSpacing:1,cursor:'pointer',fontFamily:'Barlow Condensed',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                            📂 EXCEL DATEI WÄHLEN
-                        </button>
-                        <input ref={fileRef} type="file" accept=".xlsx" onChange={handleFile} style={{display:'none'}}/>
-                    </div>
-                    {groups.length>0 && (
-                        <>
-                            <button onClick={toggleSelectMode}
-                                style={{padding:'10px 18px',borderRadius:10,border:'1.5px solid',fontSize:11,fontWeight:800,textTransform:'uppercase',letterSpacing:0.8,cursor:'pointer',fontFamily:'Barlow Condensed',whiteSpace:'nowrap',transition:'all 0.15s',
-                                    background:selectMode?'rgba(59,130,246,0.2)':'rgba(255,255,255,0.04)',
-                                    borderColor:selectMode?'#3b82f6':'#334155',
-                                    color:selectMode?'#60a5fa':'#94a3b8'}}>
-                                {selectMode ? '✕ Abbrechen' : '☑ Auswählen'}
-                            </button>
-                            <button onClick={()=>setShowSendAll(true)}
-                                style={{padding:'10px 18px',background:'linear-gradient(135deg,#059669,#10b981)',border:'none',borderRadius:10,color:'#fff',fontSize:11,fontWeight:800,textTransform:'uppercase',letterSpacing:0.8,cursor:'pointer',fontFamily:'Barlow Condensed',whiteSpace:'nowrap'}}>
-                                📤 ALLE {totalEntries}
-                            </button>
-                        </>
-                    )}
-                </div>
-
-                {loading && <div style={{textAlign:'center',padding:'60px 0',color:'#3b82f6',fontSize:14,fontWeight:700}}>⏳ Verarbeite Datei...</div>}
-                {error && <div style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:10,padding:'12px 16px',color:'#f87171',marginBottom:16}}>❌ {error}</div>}
-
-                {/* STATS */}
-                {groups.length>0 && (
-                    <div style={{display:'flex',gap:12,marginBottom:20,flexWrap:'wrap'}}>
-                        <div className="stat-box"><div className="stat-val" style={{color:'#60a5fa'}}>{totalEntries}</div><div className="stat-label">Aufträge</div></div>
-                        <div className="stat-box"><div className="stat-val" style={{color:'#a5b4fc'}}>{groups.length}</div><div className="stat-label">Tage</div></div>
-                        <div className="stat-box"><div className="stat-val" style={{color:'#34d399'}}>{kalenderTeams.length}</div><div className="stat-label">Gruppen</div></div>
-                        {selectMode && (
-                            <div className="stat-box" style={{background:'rgba(59,130,246,0.08)',borderColor:'rgba(59,130,246,0.2)'}}>
-                                <div className="stat-val" style={{color:'#3b82f6'}}>{selectedIds.size}</div>
-                                <div className="stat-label">Markiert</div>
-                            </div>
-                        )}
-                        <div className="stat-box" style={{flex:1,minWidth:180}}>
-                            <div style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:1,color:'#64748b',marginBottom:5}}>Gruppen</div>
-                            <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                                <span style={{background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)',borderRadius:6,padding:'2px 7px',fontSize:8,fontWeight:700,color:'#60a5fa'}}>🔵 URIM</span>
-                                {kalenderTeams.map(t=>(
-                                    <span key={t.id} style={{background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:6,padding:'2px 7px',fontSize:8,fontWeight:700,color:'#a5b4fc'}}>{t.name}</span>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* SELECT MODE TOOLBAR */}
-                {selectMode && groups.length>0 && (
-                    <div className="sel-toolbar">
-                        <span style={{color:'#60a5fa',fontSize:10,fontWeight:800,textTransform:'uppercase',letterSpacing:1}}>☑ Auswahlmodus</span>
-                        <span style={{color:'#94a3b8',fontSize:10}}>{selectedIds.size} von {totalEntries} markiert</span>
-                        <button onClick={selectAllEverything} style={{padding:'4px 12px',borderRadius:8,border:'1px solid rgba(59,130,246,0.3)',background:'rgba(59,130,246,0.1)',color:'#60a5fa',fontSize:9,fontWeight:800,textTransform:'uppercase',cursor:'pointer',fontFamily:'Barlow Condensed'}}>
-                            Alle wählen ({totalEntries})
-                        </button>
-                        <button onClick={clearSelection} style={{padding:'4px 12px',borderRadius:8,border:'1px solid #1e293b',background:'transparent',color:'#64748b',fontSize:9,fontWeight:800,textTransform:'uppercase',cursor:'pointer',fontFamily:'Barlow Condensed'}}>
-                            Alle abwählen
-                        </button>
-                        <div style={{flex:1}}></div>
-                        <span style={{color:'#64748b',fontSize:9}}>Aufträge anklicken zum Markieren</span>
-                    </div>
-                )}
-
-                {/* AUFTRÄGE */}
-                {groups.map((group, i) => (
-                    <DayGroup key={i} group={group} kalenderTeams={kalenderTeams} toast={showToast}
-                        selectMode={selectMode} selectedIds={selectedIds}
-                        onToggleSelect={toggleSelect}
-                        onSelectAll={selectAll} onDeselectAll={deselectAll}/>
-                ))}
-
-                {groups.length===0 && !loading && !error && (
-                    <div style={{textAlign:'center',padding:'80px 0'}}>
-                        <div style={{fontSize:64,marginBottom:16}}>📂</div>
-                        <div style={{fontSize:18,fontFamily:'Barlow Condensed',fontWeight:900,textTransform:'uppercase',letterSpacing:2,color:'#334155'}}>Excel Datei hochladen</div>
-                        <div style={{color:'#1e293b',fontSize:12,marginTop:8}}>Aufträge werden verarbeitet — pro Auftrag oder als Auswahl senden</div>
-                    </div>
-                )}
-            </div>
-
-            {/* FLOATING SELECTION BAR */}
-            {selectMode && selectedIds.size>0 && (
-                <div className="sel-bar">
-                    <div style={{background:'linear-gradient(135deg,#3b82f6,#6366f1)',color:'#fff',fontFamily:'Barlow Condensed',fontSize:22,fontWeight:900,borderRadius:10,padding:'2px 16px',minWidth:44,textAlign:'center'}}>
-                        {selectedIds.size}
-                    </div>
-                    <div>
-                        <div style={{color:'#fff',fontSize:12,fontWeight:700,fontFamily:'Barlow Condensed',textTransform:'uppercase',letterSpacing:1}}>
-                            {selectedIds.size} Aufträge markiert
-                        </div>
-                        <div style={{color:'#475569',fontSize:9,marginTop:1}}>Bereit zum Senden</div>
-                    </div>
-                    <div style={{width:1,height:32,background:'#1e293b'}}></div>
-                    <button onClick={()=>setShowMultiSend(true)}
-                        style={{padding:'10px 20px',background:'linear-gradient(135deg,#10b981,#059669)',border:'none',borderRadius:12,color:'#fff',fontSize:11,fontWeight:800,textTransform:'uppercase',letterSpacing:0.8,cursor:'pointer',fontFamily:'Barlow Condensed',boxShadow:'0 4px 14px rgba(16,185,129,0.4)',display:'flex',alignItems:'center',gap:6}}>
-                        📤 Auswahl senden
-                    </button>
-                    <button onClick={clearSelection}
-                        style={{padding:'10px 14px',background:'rgba(255,255,255,0.06)',border:'1px solid #334155',borderRadius:12,color:'#94a3b8',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:'Barlow Condensed',textTransform:'uppercase'}}>
-                        Leeren
-                    </button>
-                    <button onClick={toggleSelectMode}
-                        style={{padding:'10px 14px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:12,color:'#ef4444',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:'Barlow Condensed',textTransform:'uppercase'}}>
-                        ✕
-                    </button>
-                </div>
-            )}
-
-            {/* MODALS */}
-            {showSendAll && (
-                <SendAllModal groups={groups} kalenderTeams={kalenderTeams}
-                    onClose={()=>setShowSendAll(false)} toast={showToast}/>
-            )}
-            {showMultiSend && (
-                <MultiSendModal entries={selectedEntries} kalenderTeams={kalenderTeams}
-                    onClose={()=>setShowMultiSend(false)} toast={showToast}
-                    onDone={(count)=>{ setShowMultiSend(false); clearSelection(); setSelectMode(false); }}/>
-            )}
-
-            {/* TOAST */}
-            {toast && <Toast key={toast.id} msg={toast.msg} type={toast.type} onDone={()=>setToastMsg(null)}/>}
+function renderSidebar() {
+  const maxDay = Math.max(1, ...Object.keys(DAYS).map(d => state.filter(x=>x.datum===d).length));
+  document.getElementById('dayPills').innerHTML = Object.entries(DAYS).map(([date,label]) => {
+    const tot  = state.filter(d=>d.datum===date).length;
+    const mont = state.filter(d=>d.datum===date&&d.has_montage).length;
+    const pct  = Math.round(tot/maxDay*100);
+    return `<div class="day-pill${activeDay===date?' active':''}" data-day="${date}" onclick="setDayFilter('${date}')">
+      <div style="flex:1">
+        <div class="day-pill-name">${label}</div>
+        <div style="height:2px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:var(--accent2);border-radius:2px"></div>
         </div>
-    );
+      </div>
+      <div class="day-pill-meta" style="margin-left:8px">${tot}<span style="color:var(--montage)"> ·${mont}M</span></div>
+    </div>`;
+  }).join('');
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+function renderList() {
+  const rows = getFiltered();
+  document.getElementById('resultCount').textContent = rows.length + ' Aufträge';
+  let html = '';
+  let lastKey = '';
+  rows.forEach((d, i) => {
+    const prio    = sortPriority(d);
+    const prioGrp = prio <= 2 ? 'top' : 'rest';
+    const key     = d.datum + '|' + prioGrp;
+    if (lastKey && lastKey !== key && lastKey.split('|')[0] === d.datum && prioGrp === 'rest') {
+      html += `<tr><td colspan="9" style="padding:1px 0;border:none"><div style="border-top:1px dashed var(--border2);margin:0 12px;opacity:.4"></div></td></tr>`;
+    }
+    lastKey = key;
+
+    const isSelected = selectedIds.has(d._id);
+    const sentBadges = d.sentTo && d.sentTo.length > 0
+      ? d.sentTo.map(s=>`<span class="badge badge-sent">✓ ${s.label}</span>`).join('')
+      : '';
+
+    const cbCell = selectMode ? `<td class="cb-cell"><div class="cb${isSelected?' checked':''}">✓</div></td>` : '';
+
+    const sendCell = selectMode ? `<td></td>` : `<td>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}"
+          data-send-id="${d._id}"
+          onclick="event.stopPropagation();openSendDrop('${d._id}',this)"
+        >${d.sentTo&&d.sentTo.length>0?`✓ Gesendet (${d.sentTo.length}) ▼`:'📤 Senden ▼'}</button>
+        ${sentBadges}
+      </div>
+    </td>`;
+
+    html += `<tr class="${d.has_montage?'has-montage':'no-montage'}${isSelected?' selected-row':''}"
+      data-row-id="${d._id}"
+      style="animation-delay:${i*0.01}s;cursor:${selectMode?'pointer':'default'}"
+      ${selectMode?`onclick="toggleSelect('${d._id}')"`:''}>
+      ${cbCell}
+      <td class="td-date">${DAYS[d.datum]||d.datum}</td>
+      <td class="td-auftrag">${d.auftrag||'—'}</td>
+      <td>
+        <div class="td-kunde-name">${d.kunde}</div>
+        <div class="td-kunde-sub">${d.projekt}</div>
+      </td>
+      <td class="td-ort">${d.plz} ${d.ort}</td>
+      <td class="td-ele" style="text-align:right">${d.eleNum>0?d.eleNum+'&nbsp;ELE':d.ele||'—'}</td>
+      <td>
+        ${d.has_montage?'<span class="badge badge-montage">Montage</span>':''}
+        ${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}
+      </td>
+      <td><span class="memo-text" title="${d.memo}">${d.memo||'—'}</span></td>
+      ${sendCell}
+    </tr>`;
+  });
+  document.getElementById('tableBody').innerHTML = html;
+  document.getElementById('th-cb').style.display = selectMode ? 'table-cell' : 'none';
+}
+
+function renderDayView() {
+  document.getElementById('dayColGrid').innerHTML = Object.entries(DAYS).map(([date, label]) => {
+    const items = getFiltered().filter(d => d.datum === date);
+    const mont  = items.filter(d => d.has_montage).length;
+    const cards = items.map(d => `
+      <div class="day-card${d.has_montage?' montage':''}">
+        <div class="day-card-kunde">${d.kunde}</div>
+        <div class="day-card-ort">${d.plz} ${d.ort}</div>
+        <div class="day-card-badges">
+          ${d.has_montage?'<span class="badge badge-montage">M</span>':''}
+          ${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}
+          ${d.sentTo&&d.sentTo.length>0?'<span class="badge badge-sent">✓</span>':''}
+          <div class="day-card-send">
+            <button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}" style="font-size:9px;padding:3px 8px"
+              data-send-id="${d._id}"
+              onclick="event.stopPropagation();openSendDrop('${d._id}',this)">
+              ${d.sentTo&&d.sentTo.length>0?'✓':'📤'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    return `<div>
+      <div class="day-col-header">
+        <div class="day-col-title">${label}</div>
+        <div class="day-col-meta">${items.length} Auftr. · <span style="color:var(--montage)">${mont}× M</span></div>
+      </div>
+      <div class="day-col-body">${cards||'<div style="padding:12px;font-size:11px;color:var(--text3)">Keine Einträge</div>'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// EXPORT CSV
+// ══════════════════════════════════════════════
+function exportCSV() {
+  const rows = getFiltered();
+  const hdr  = ['Datum','Auftrag','Kunde','PLZ','Ort','ELE','Montage','Termin','Memo','Gesendet'];
+  const lines = [hdr.join(';'), ...rows.map(d => [
+    DAYS[d.datum]||d.datum, d.auftrag, `"${d.kunde}"`, d.plz, d.ort,
+    d.eleNum||d.ele||'', d.has_montage?'Ja':'Nein', d.termin_fix?'FIX':'Prov.',
+    `"${d.memo||''}"`, d.sentTo&&d.sentTo.length?d.sentTo.map(s=>s.label).join(', '):''
+  ].join(';'))];
+  const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'Tourendispo_Export.csv'; a.click();
+}
 </script>
 </body>
 </html>

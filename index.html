@@ -353,6 +353,7 @@ tbody tr{animation:fadeIn .12s ease both}
       <div class="sb-label">Filter</div>
       <div class="type-filters" id="typeFilters">
         <div class="type-filter active" data-filter="all" onclick="setTypeFilter('all',this)"><div class="type-dot" style="background:var(--text2)"></div>Alle<span class="type-count" id="cnt-all">—</span></div>
+        <div class="type-filter" data-filter="pe" onclick="setTypeFilter('pe',this)"><div class="type-dot" style="background:#f0c040"></div>⚡ PE-Aufträge<span class="type-count" id="cnt-pe">—</span></div>
         <div class="type-filter" data-filter="montage" onclick="setTypeFilter('montage',this)"><div class="type-dot" style="background:var(--montage)"></div>Mit Montage<span class="type-count" id="cnt-montage">—</span></div>
         <div class="type-filter" data-filter="fix" onclick="setTypeFilter('fix',this)"><div class="type-dot" style="background:var(--fix)"></div>Termin FIX<span class="type-count" id="cnt-fix">—</span></div>
         <div class="type-filter" data-filter="notsent" onclick="setTypeFilter('notsent',this)"><div class="type-dot" style="background:var(--blue)"></div>Nicht gesendet<span class="type-count" id="cnt-notsent">—</span></div>
@@ -383,6 +384,10 @@ tbody tr{animation:fadeIn .12s ease both}
       <button class="sel-btn" id="selModeBtn" onclick="toggleSelectMode()">☑ Auswählen</button>
       <button class="hbtn green" id="btnSendAll" style="display:none;font-size:11px" onclick="openSendAll()">📤 Alle senden</button>
       <span class="result-count" id="resultCount"></span>
+    </div>
+
+    <div id="importBanner" style="display:none;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 14px;font-size:11px;color:#10b981;margin-bottom:8px;line-height:1.6;gap:8px;align-items:flex-start">
+      <span style="cursor:pointer;margin-left:auto;color:var(--text3);font-size:14px;float:right" onclick="document.getElementById('importBanner').style.display='none'">✕</span>
     </div>
 
     <div class="table-container" id="listView">
@@ -654,8 +659,9 @@ function processRows(rows) {
       plz,
       ort,
       eleNum,
-      has_montage: combined.includes('montage'),
-      termin_fix:  combined.includes('fix'),
+      has_montage:  combined.includes('montage'),
+      termin_fix:   combined.includes('fix') && !combined.includes('noch nicht fix'),
+      pe_relevant:  combined.includes('montage') && combined.includes('fix') && !combined.includes('noch nicht fix'),
       memo:        memoForCalendar,
       // For Firebase send — exactly matching what calendar expects
       customer:     kunde,           // Col E
@@ -680,8 +686,29 @@ function processRows(rows) {
   selectedIds = new Set();
   selectMode = false;
   activeDay = 'all';
-  typeFilter = 'all';
   document.getElementById('search').value = '';
+
+  // Auto-Filter: PE-Aufträge (Montage + FIX) beim Import automatisch aktivieren
+  const peCount  = parsed.filter(d => d.pe_relevant).length;
+  const allCount = parsed.length;
+  const fixOhneMontage = parsed.filter(d => d.termin_fix && !d.has_montage);
+  typeFilter = peCount > 0 ? 'pe' : 'all';
+  document.querySelectorAll('.type-filter').forEach(e => {
+    e.classList.toggle('active', e.dataset.filter === typeFilter);
+  });
+
+  // Import-Banner anzeigen
+  const banner = document.getElementById('importBanner');
+  if (banner) {
+    const hidden = allCount - peCount;
+    let warn = '';
+    if (fixOhneMontage.length > 0) {
+      const names = fixOhneMontage.slice(0,3).map(d=>d.kunde).join(', ');
+      warn = `<br><span style="color:#f0c040">⚠ ${fixOhneMontage.length} Auftrag${fixOhneMontage.length>1?'e':''} mit FIX aber ohne Montage-Text (${names}${fixOhneMontage.length>3?' …':''}) → manuell prüfen</span>`;
+    }
+    banner.innerHTML = `✅ <strong>${peCount} PE-Aufträge</strong> (Montage + FIX) aus ${allCount} Einträgen importiert — ${hidden} ausgeblendet${warn}`;
+    banner.style.display = 'flex';
+  }
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('btnSendAll').style.display = 'inline-flex';
   document.getElementById('btnExport').style.display = 'inline-block';
@@ -695,12 +722,14 @@ function processRows(rows) {
 function updateKPIs() {
   const mont = state.filter(d=>d.has_montage).length;
   const fix  = state.filter(d=>d.termin_fix).length;
+  const pe   = state.filter(d=>d.pe_relevant).length;
   const sent = state.filter(d=>d.sentTo && d.sentTo.length>0).length;
   document.getElementById('s-total').textContent   = state.length;
   document.getElementById('s-montage').textContent = mont;
   document.getElementById('s-fix').textContent     = fix;
   document.getElementById('s-sent').textContent    = sent;
   document.getElementById('cnt-all').textContent   = state.length;
+  document.getElementById('cnt-pe').textContent    = pe;
   document.getElementById('cnt-montage').textContent = mont;
   document.getElementById('cnt-fix').textContent   = fix;
   document.getElementById('cnt-notsent').textContent = state.filter(d=>!d.sentTo||d.sentTo.length===0).length;
@@ -713,6 +742,7 @@ function getFiltered() {
   const q = document.getElementById('search').value.toLowerCase();
   return state.filter(d => {
     if (activeDay !== 'all' && d.datum !== activeDay) return false;
+    if (typeFilter === 'pe'       && !d.pe_relevant)  return false;
     if (typeFilter === 'montage'  && !d.has_montage) return false;
     if (typeFilter === 'fix'      && !d.termin_fix)  return false;
     if (typeFilter === 'notsent'  && d.sentTo && d.sentTo.length>0) return false;

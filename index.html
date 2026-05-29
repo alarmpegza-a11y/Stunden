@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tourendispo v3</title>
+<title>Tourendispo v4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -102,11 +102,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .type-filter.active{background:var(--surface);border-color:var(--border2);color:var(--text)}
 .type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .type-count{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text3)}
-.grp-items{display:flex;flex-direction:column;gap:5px}
-.grp-row{display:flex;align-items:center;justify-content:space-between;font-size:12px}
-.grp-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;margin-right:8px}
-.grp-name{color:var(--text2);flex:1}
-.grp-cnt{font-family:var(--mono);font-size:11px;color:var(--text3)}
 .kal-teams{display:flex;flex-direction:column;gap:4px}
 .kal-team-row{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--surface);border-radius:6px;border:1px solid var(--border)}
 .kal-team-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -140,6 +135,57 @@ tbody tr:hover{background:var(--surface)}
 tbody tr.has-montage{border-left:2px solid var(--montage)}
 tbody tr.no-montage{border-left:2px solid transparent}
 tbody tr.selected-row{background:rgba(59,130,246,0.07)!important;border-left:2px solid var(--blue)!important}
+
+/* ── DAY SEPARATOR ROW ── */
+.day-sep-row td {
+  padding:0 !important;
+  border:none !important;
+}
+.day-sep-inner {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 12px 6px;
+  margin-top:4px;
+}
+.day-sep-line {
+  flex:1;
+  height:1px;
+  background:linear-gradient(to right, var(--accent2), transparent);
+  opacity:.35;
+}
+.day-sep-label {
+  font-family:var(--cond);
+  font-size:15px;
+  font-weight:900;
+  color:var(--accent);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  padding:4px 12px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:6px;
+}
+.day-sep-count {
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--text3);
+  white-space:nowrap;
+}
+.day-sep-montage {
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--montage);
+  white-space:nowrap;
+}
+.day-sep-line-right {
+  flex:1;
+  height:1px;
+  background:linear-gradient(to left, transparent, var(--border2));
+  opacity:.3;
+}
+
 td{padding:8px 12px;vertical-align:middle}
 .td-date{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
 .td-auftrag{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
@@ -260,20 +306,17 @@ tbody tr{animation:fadeIn .12s ease both}
 </head>
 <body>
 
-<!-- LOADING -->
 <div id="loadOverlay" style="display:none;flex">
   <div style="width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite"></div>
   <div style="font-family:var(--mono);font-size:12px;color:var(--text2)" id="loadMsg">Wird geladen…</div>
 </div>
 
-<!-- TOAST CONTAINER -->
 <div class="toast-wrap" id="toastWrap"></div>
 
-<!-- HEADER -->
 <header class="header">
   <div class="header-left">
     <span class="logo">Tourendispo</span>
-    <span class="logo-sub">v3 · Multi-Kalender</span>
+    <span class="logo-sub">v4 · Multi-Kalender</span>
   </div>
   <div class="conn-pills">
     <div class="conn-pill"><div class="conn-dot" id="dot-montage"></div><span>PE-MONTAGE</span></div>
@@ -291,9 +334,7 @@ tbody tr{animation:fadeIn .12s ease both}
   </div>
 </header>
 
-<!-- LAYOUT -->
 <div class="layout">
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sb-section">
       <div class="sb-label">Übersicht</div>
@@ -329,7 +370,6 @@ tbody tr{animation:fadeIn .12s ease both}
     </div>
   </aside>
 
-  <!-- MAIN -->
   <main class="main">
     <div class="toolbar">
       <div class="search-wrap">
@@ -349,8 +389,8 @@ tbody tr{animation:fadeIn .12s ease both}
       <table>
         <thead><tr>
           <th class="cb-cell" id="th-cb" style="display:none"></th>
-          <th>Datum</th><th>Auftrag</th><th>Kunde / Projekt</th>
-          <th>Ort</th><th style="text-align:right">ELE</th>
+          <th>Auftrag</th><th>Kunde / Projekt</th>
+          <th>Adresse</th><th style="text-align:right">ELE</th>
           <th>Status</th><th>Memo</th><th>Senden</th>
         </tr></thead>
         <tbody id="tableBody"></tbody>
@@ -362,7 +402,6 @@ tbody tr{animation:fadeIn .12s ease both}
   </main>
 </div>
 
-<!-- FLOATING SELECTION BAR -->
 <div class="sel-bar" id="selBar" style="display:none">
   <div class="sel-bar-cnt" id="selBarCnt">0</div>
   <div>
@@ -375,7 +414,6 @@ tbody tr{animation:fadeIn .12s ease both}
   <button class="sel-bar-btn" onclick="toggleSelectMode()" style="background:rgba(240,128,128,.08);border-color:rgba(240,128,128,.25);color:var(--fix)">✕</button>
 </div>
 
-<!-- MULTI SEND MODAL -->
 <div class="modal-bg" id="multiSendModal" style="display:none">
   <div class="modal-box">
     <div class="modal-head">
@@ -399,28 +437,28 @@ const CAL_TYPES = [
   { key:'beplankung', label:'Beplankung', icon:'🏗',  color:'#10b981', bg:'rgba(16,185,129,.15)', border:'rgba(16,185,129,.4)' },
   { key:'ausflocken', label:'Ausflocken', icon:'❄️',  color:'#f97316', bg:'rgba(249,115,22,.15)',  border:'rgba(249,115,22,.4)'  },
 ];
-const GRUPPEN = ["A","B","C","D","E"];
-const GCOLORS = {A:"#7ec8e3",B:"#b5a0d8",C:"#f0c070",D:"#80d0a0",E:"#f09080"};
+
+// Weekday names for day separator
+const WEEKDAY_DE = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+const WEEKDAY_FULL = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
 
 // ══════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════
-let state = [];          // all parsed rows
-let DAYS  = {};          // {datum: shortLabel}
+let state = [];
+let DAYS  = {};
 let kalenderTeams = [];
 let activeDay   = 'all';
 let typeFilter  = 'all';
 let currentView = 'list';
 let selectMode  = false;
 let selectedIds = new Set();
-let sentAuftragIds = new Set(); // track sent
 let suffix = 'SLI';
 let rawRows = null;
 let modalEntries = [];
-let modalSendingState = {};
 
 // ══════════════════════════════════════════════
-// FIREBASE — connection checks
+// FIREBASE
 // ══════════════════════════════════════════════
 document.getElementById('dot-montage').className = 'conn-dot ' + (window._dbMontage ? 'ok' : 'err');
 document.getElementById('dot-kalender').className = 'conn-dot ' + (window._dbKalender ? 'ok' : 'err');
@@ -468,8 +506,27 @@ function sortPriority(d) {
   return 4;
 }
 
+function formatDayLabel(dateStr) {
+  // dateStr = "2026-06-01"
+  const d = new Date(dateStr + 'T00:00:00');
+  const wd = WEEKDAY_FULL[d.getDay()];
+  const day = String(d.getDate()).padStart(2,'0');
+  const month = String(d.getMonth()+1).padStart(2,'0');
+  return `${wd}, ${day}.${month}.`;
+}
+
 // ══════════════════════════════════════════════
-// EXCEL PARSE (friend's robust parser)
+// EXCEL PARSE
+// Col A (0) = Datum
+// Col B (1) = Memo1  
+// Col C (2) = Memo2 → goes to memo field (ELE info, house info)
+// Col D (3) = Auftragsnr
+// Col E (4) = Kunde
+// Col F (5) = Projekt/Adresse description
+// Col G (6) = Strasse
+// Col H (7) = PLZ
+// Col I (8) = Ort
+// Col J (9) = ELE count
 // ══════════════════════════════════════════════
 function showOverlay(msg) { const o=document.getElementById('loadOverlay'); o.style.display='flex'; document.getElementById('loadMsg').textContent=msg||'Wird geladen…'; }
 function hideOverlay() { document.getElementById('loadOverlay').style.display='none'; }
@@ -521,7 +578,6 @@ function loadExcel(input) {
 }
 
 function processRows(rows) {
-  // Find header row dynamically (friend's method)
   let headerIdx = rows.findIndex(r => r.some(c => String(c).includes('Lieferdatum')));
   if (headerIdx < 0) headerIdx = 6;
   const dataRows = rows.slice(headerIdx + 1);
@@ -530,6 +586,7 @@ function processRows(rows) {
   const dayMap = {};
 
   dataRows.forEach(row => {
+    // Col A = Datum
     let rawDate = row[0];
     if (!rawDate) return;
     let dateObj;
@@ -553,47 +610,60 @@ function processRows(rows) {
     const shortDate = dateObj.toLocaleDateString('de-CH', {weekday:'short', day:'2-digit', month:'2-digit'});
     if (!dayMap[datum]) dayMap[datum] = shortDate;
 
+    // Col B = Memo1 (internal notes, avis info)
     const memo1 = String(row[1]||'').replace(/\n/g,' ').trim();
+    // Col C = Memo2 → ELE info / Haus info → goes directly into memo for calendar
     const memo2 = String(row[2]||'').replace(/\n/g,' ').trim();
+    
     const combined = (memo1 + ' ' + memo2).toLowerCase();
 
-    const kunde    = String(row[4]||'').trim();
-    const projekt  = String(row[5]||'').trim();
-    const strasse  = String(row[9]||'').trim();
-    const plz      = String(row[7]||'').trim();
-    const ort      = String(row[8]||'').trim();
-    const auftrag  = String(row[3]||'').trim();
-    const ele      = String(row[9]||row[6]||'').trim();
+    // Col D = Auftragsnr
+    const auftrag = String(row[3]||'').trim();
+    // Col E = Kunde
+    const kunde   = String(row[4]||'').trim();
+    // Col F = Projekt (beschreibung)
+    const projekt = String(row[5]||'').trim();
+    // Col G = Strasse
+    const strasse = String(row[6]||'').trim();
+    // Col H = PLZ
+    const plz     = String(row[7]||'').trim();
+    // Col I = Ort
+    const ort     = String(row[8]||'').trim();
+    // Col J = ELE count
+    const eleRaw  = row[9];
+    const eleNum  = (eleRaw && !isNaN(Number(eleRaw))) ? Number(eleRaw) : 0;
 
-    // ELE extraction from memo
-    const eleMatch = combined.match(/(\d+)\s*ele/i);
-    const eleNum   = eleMatch ? parseInt(eleMatch[1]) : 0;
+    // Address: Strasse + PLZ + Ort (from cols G, H, I)
+    const adresse = [strasse, [plz, ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
-    // Address
-    const adresse = strasse ? `${strasse}, ${plz} ${ort}`.replace(/^,|,\s*$/,'').trim()
-                             : [plz, ort].filter(Boolean).join(' ');
+    // Memo for calendar entry = Col C content (ELE / Haus info)
+    // Trim trailing " -" or dashes
+    const memoForCalendar = memo2.replace(/\s*-\s*$/, '').trim() || memo1.replace(/\s*-\s*$/, '').trim() || '';
 
-    const memo = [memo2, memo1].filter(Boolean).join(' · ').slice(0, 140);
+    if (!kunde && !auftrag) return;
 
     parsed.push({
       _id:      genId(),
       datum,
+      // For display
       auftrag,
       auftragsNr: auftrag ? `${auftrag}/${suffix}` : '',
       kunde,
       projekt,
-      address:  adresse,
-      customer: kunde,
+      strasse,
       plz,
       ort,
-      ele,
       eleNum,
       has_montage: combined.includes('montage'),
       termin_fix:  combined.includes('fix'),
-      memo,
-      target: eleNum,
-      date:   datum,
-      sentTo: [],  // [{label, color}]
+      memo:        memoForCalendar,
+      // For Firebase send — exactly matching what calendar expects
+      customer:     kunde,           // Col E
+      address:      adresse,         // Col G + H + I
+      auftragsNrClean: cleanAuftragsNr(auftrag), // Col D (clean, no suffix)
+      target:       eleNum,          // Col J
+      date:         datum,
+      sentTo: [],
     });
   });
 
@@ -607,7 +677,6 @@ function processRows(rows) {
   Object.entries(dayMap).sort().forEach(([d,l]) => DAYS[d] = l);
 
   state = parsed;
-  sentAuftragIds = new Set();
   selectedIds = new Set();
   selectMode = false;
   activeDay = 'all';
@@ -694,7 +763,6 @@ function toggleSelectMode() {
 function toggleSelect(id) {
   selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
   updateSelBar();
-  // Only update the affected row in-place, no full re-render
   const tr = document.querySelector(`tr[data-row-id="${id}"]`);
   if (tr) {
     const isNowSelected = selectedIds.has(id);
@@ -710,19 +778,6 @@ function clearSelection() {
     tr.classList.remove('selected-row');
     const cb = tr.querySelector('.cb');
     if (cb) cb.classList.remove('checked');
-  });
-}
-function selectAllVisible() {
-  getFiltered().forEach(d => selectedIds.add(d._id));
-  updateSelBar();
-  // Update all visible rows in-place
-  document.querySelectorAll('tr[data-row-id]').forEach(tr => {
-    const id = tr.dataset.rowId;
-    if (selectedIds.has(id)) {
-      tr.classList.add('selected-row');
-      const cb = tr.querySelector('.cb');
-      if (cb) cb.classList.add('checked');
-    }
   });
 }
 function updateSelBar() {
@@ -741,19 +796,28 @@ async function sendToMontage(entry, calType) {
   const calId = `cal-${genId()}`;
   await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/calentries').doc(calId).set({
     id:calId, createdAt:new Date().toISOString(), isDone:false, isBilled:false,
-    entryType:'LIEFERUNG', customer:entry.customer||'', address:entry.address||'',
-    memo:entry.memo||'', auftragsNr:cleanAuftragsNr(entry.auftragsNr||''),
-    target:entry.target||0, images:[], image:null, deliveryDate:entry.date||'',
+    entryType:'LIEFERUNG',
+    customer: entry.customer,           // Col E: Kunde
+    address:  entry.address,            // Col G+H+I: Strasse, PLZ Ort
+    memo:     entry.memo,               // Col C: ELE/Haus info
+    auftragsNr: entry.auftragsNrClean,  // Col D: Auftragsnr (clean)
+    target:   entry.target,             // Col J: ELE count
+    images:[], image:null,
+    deliveryDate: entry.date,
     endDate:null, isMultiDay:false, calType:calType||'montage', isProv:false, customStartLabel:'',
   });
-  const memo = entry.memo || '';
-  const houseInfo = memo.replace(/\d+\s*ELE/gi,'').replace(/\bGIS\b/gi,'').replace(/[-–]\s*$/,'').trim() || 'Gesamtmontage';
+  const houseInfo = entry.memo || 'Gesamtmontage';
   const objId = `obj-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
   await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/objects').doc(objId).set({
-    id:objId, name:entry.address||'', customer:entry.customer||'', address:entry.address||'',
-    houseInfo, auftragsNr:cleanAuftragsNr(entry.auftragsNr||''), target:entry.target||0,
+    id:objId,
+    name:    entry.address,
+    customer:entry.customer,
+    address: entry.address,
+    houseInfo,
+    auftragsNr: entry.auftragsNrClean,
+    target:  entry.target,
     current:0, lastRemaining:null, blockReason:null,
-    deliveryDate:entry.date ? new Date(entry.date).toISOString() : new Date().toISOString(),
+    deliveryDate: entry.date ? new Date(entry.date).toISOString() : new Date().toISOString(),
     status:'active', history:[],
   });
   return calId;
@@ -764,9 +828,14 @@ async function sendToKalender(entry, teamId, calType) {
   const id = `cal-${genId()}`;
   await window._dbKalender.collection(`teams_cal_${teamId}`).doc(id).set({
     id, createdAt:new Date().toISOString(), isDone:false, isBilled:false,
-    entryType:'LIEFERUNG', customer:entry.customer||'', address:entry.address||'',
-    memo:entry.memo||'', auftragsNr:cleanAuftragsNr(entry.auftragsNr||''),
-    target:entry.target||0, images:[], image:null, deliveryDate:entry.date||'',
+    entryType:'LIEFERUNG',
+    customer: entry.customer,           // Col E: Kunde
+    address:  entry.address,            // Col G+H+I: Strasse, PLZ Ort
+    memo:     entry.memo,               // Col C: ELE/Haus info
+    auftragsNr: entry.auftragsNrClean,  // Col D: Auftragsnr (clean)
+    target:   entry.target,             // Col J: ELE count
+    images:[], image:null,
+    deliveryDate: entry.date,
     endDate:null, isMultiDay:false, calType:calType||'montage', isProv:false, customStartLabel:'',
   });
   return id;
@@ -839,7 +908,6 @@ async function doSendRow(entryId, app, teamId, calType) {
   const entry = state.find(d => d._id === entryId);
   if (!entry) return;
 
-  // Mark as sending in DOM
   const btn = document.querySelector(`[data-send-id="${entryId}"]`);
   if (btn) { btn.className = 'send-btn sending'; btn.textContent = '⏳ Sende…'; btn.disabled = true; }
 
@@ -901,7 +969,6 @@ function renderModalBody(sending, progress, done, sentCount) {
         <div style="color:var(--montage);font-size:22px;font-weight:900;font-family:var(--cond);text-transform:uppercase">${sentCount} Aufträge gesendet!</div>
         <div style="color:var(--text3);font-size:11px;margin-top:6px">
           → ${modalApp==='montage'?'PE-Montage URIM':modalTeam?.name} / ${CAL_TYPES.find(x=>x.key===modalCalType)?.label}
-          ${modalApp==='montage'?'<div style="color:var(--montage);margin-top:4px;font-size:10px">✓ Kalender & Objekt-Liste erstellt</div>':''}
         </div>
       </div>
       <button class="modal-cancel" style="background:var(--montage);color:#0f0f0f;border-color:var(--montage)" onclick="closeModal()">✓ FERTIG</button>
@@ -909,7 +976,6 @@ function renderModalBody(sending, progress, done, sentCount) {
     return;
   }
 
-  // Preview list
   const previewItems = modalEntries.slice(0,8).map((e,i)=>`
     <div style="display:flex;gap:8px;align-items:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)">
       <span style="color:var(--blue);font-size:9px;font-family:var(--mono);min-width:18px">${i+1}.</span>
@@ -933,7 +999,7 @@ function renderModalBody(sending, progress, done, sentCount) {
 
   const teamsList = modalApp==='kalender' ? `
     <div>
-      <div class="modal-section-label">${modalApp==='kalender'?'2.':'—'} Gruppe wählen</div>
+      <div class="modal-section-label">2. Gruppe wählen</div>
       <div class="teams-list">
         ${kalenderTeams.map(t=>`
           <div class="team-opt" onclick="modalSetTeam('${t.id}')"
@@ -968,7 +1034,7 @@ function renderModalBody(sending, progress, done, sentCount) {
 
   body.innerHTML = `
     <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:9px;padding:10px 12px;max-height:110px;overflow-y:auto">
-      <div style="color:var(--text3);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:5px">${modalEntries.length} Markierte Aufträge</div>
+      <div style="color:var(--text3);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:5px">${modalEntries.length} Aufträge</div>
       ${previewItems}${extra}
     </div>
     <div>
@@ -1005,7 +1071,6 @@ async function runModalSend() {
       const ct = CAL_TYPES.find(x=>x.key===modalCalType);
       const label = modalApp==='montage' ? `URIM / ${ct?.label||modalCalType}` : `${modalTeam?.name} / ${ct?.label||modalCalType}`;
       const color = modalApp==='montage' ? ct?.color||'#10b981' : modalTeam?.color||ct?.color||'#10b981';
-      // Find in state and update
       const si = state.findIndex(d=>d._id===entry._id);
       if (si>=0) state[si].sentTo.push({label, color});
       sent++;
@@ -1016,7 +1081,6 @@ async function runModalSend() {
   const ct = CAL_TYPES.find(x=>x.key===modalCalType);
   showToast('success', `✅ ${sent}/${modalEntries.length} → ${dest} / ${ct?.label||modalCalType}`);
   updateKPIs();
-  // Full re-render needed here since sent-badges changed
   if (selectMode) {
     selectedIds = new Set();
     selectMode = false;
@@ -1071,16 +1135,30 @@ function renderSidebar() {
 function renderList() {
   const rows = getFiltered();
   document.getElementById('resultCount').textContent = rows.length + ' Aufträge';
+  
+  // Group by day for separator rendering
   let html = '';
-  let lastKey = '';
+  let lastDatum = null;
+
   rows.forEach((d, i) => {
-    const prio    = sortPriority(d);
-    const prioGrp = prio <= 2 ? 'top' : 'rest';
-    const key     = d.datum + '|' + prioGrp;
-    if (lastKey && lastKey !== key && lastKey.split('|')[0] === d.datum && prioGrp === 'rest') {
-      html += `<tr><td colspan="9" style="padding:1px 0;border:none"><div style="border-top:1px dashed var(--border2);margin:0 12px;opacity:.4"></div></td></tr>`;
+    // Day separator
+    if (d.datum !== lastDatum) {
+      const dayRows = rows.filter(r => r.datum === d.datum);
+      const montCount = dayRows.filter(r => r.has_montage).length;
+      const colSpan = selectMode ? 9 : 8;
+      const fullLabel = formatDayLabel(d.datum);
+      html += `<tr class="day-sep-row">
+        <td colspan="${colSpan}">
+          <div class="day-sep-inner">
+            <div class="day-sep-label">${fullLabel}</div>
+            <span class="day-sep-count">${dayRows.length} Auftr.</span>
+            ${montCount > 0 ? `<span class="day-sep-montage">· ${montCount}× Montage</span>` : ''}
+            <div class="day-sep-line-right"></div>
+          </div>
+        </td>
+      </tr>`;
+      lastDatum = d.datum;
     }
-    lastKey = key;
 
     const isSelected = selectedIds.has(d._id);
     const sentBadges = d.sentTo && d.sentTo.length > 0
@@ -1101,17 +1179,19 @@ function renderList() {
 
     html += `<tr class="${d.has_montage?'has-montage':'no-montage'}${isSelected?' selected-row':''}"
       data-row-id="${d._id}"
-      style="animation-delay:${i*0.01}s;cursor:${selectMode?'pointer':'default'}"
+      style="animation-delay:${Math.min(i,20)*0.01}s;cursor:${selectMode?'pointer':'default'}"
       ${selectMode?`onclick="toggleSelect('${d._id}')"`:''}>
       ${cbCell}
-      <td class="td-date">${DAYS[d.datum]||d.datum}</td>
       <td class="td-auftrag">${d.auftrag||'—'}</td>
       <td>
         <div class="td-kunde-name">${d.kunde}</div>
-        <div class="td-kunde-sub">${d.projekt}</div>
+        <div class="td-kunde-sub" title="${d.projekt}">${d.projekt}</div>
       </td>
-      <td class="td-ort">${d.plz} ${d.ort}</td>
-      <td class="td-ele" style="text-align:right">${d.eleNum>0?d.eleNum+'&nbsp;ELE':d.ele||'—'}</td>
+      <td class="td-ort">
+        <div style="font-size:12px">${d.strasse||''}</div>
+        <div style="font-size:11px;color:var(--text3)">${d.plz} ${d.ort}</div>
+      </td>
+      <td class="td-ele" style="text-align:right">${d.eleNum>0?d.eleNum+'&nbsp;ELE':'—'}</td>
       <td>
         ${d.has_montage?'<span class="badge badge-montage">Montage</span>':''}
         ${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}
@@ -1161,10 +1241,10 @@ function renderDayView() {
 // ══════════════════════════════════════════════
 function exportCSV() {
   const rows = getFiltered();
-  const hdr  = ['Datum','Auftrag','Kunde','PLZ','Ort','ELE','Montage','Termin','Memo','Gesendet'];
+  const hdr  = ['Datum','Auftrag','Kunde','Strasse','PLZ','Ort','ELE','Montage','Termin','Memo','Gesendet'];
   const lines = [hdr.join(';'), ...rows.map(d => [
-    DAYS[d.datum]||d.datum, d.auftrag, `"${d.kunde}"`, d.plz, d.ort,
-    d.eleNum||d.ele||'', d.has_montage?'Ja':'Nein', d.termin_fix?'FIX':'Prov.',
+    DAYS[d.datum]||d.datum, d.auftrag, `"${d.kunde}"`, d.strasse, d.plz, d.ort,
+    d.eleNum||'', d.has_montage?'Ja':'Nein', d.termin_fix?'FIX':'Prov.',
     `"${d.memo||''}"`, d.sentTo&&d.sentTo.length?d.sentTo.map(s=>s.label).join(', '):''
   ].join(';'))];
   const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8'});

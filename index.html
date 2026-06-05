@@ -53,11 +53,17 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   background:rgba(15,15,15,.97);backdrop-filter:blur(8px);
   gap:12px;flex-wrap:wrap;
 }
-.header-left{display:flex;align-items:baseline;gap:14px}
+.header-left{display:flex;align-items:center;gap:14px}
 .logo{font-family:var(--cond);font-size:18px;font-weight:900;color:var(--accent);letter-spacing:.12em;text-transform:uppercase}
 .logo-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em}
+
+/* ── MAIN NAV TABS ── */
+.main-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:3px}
+.main-tab{padding:6px 18px;border-radius:7px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:var(--sans);font-weight:600;transition:all .15s;letter-spacing:.02em}
+.main-tab.active{background:var(--surface2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+
 .fw-badge{font-family:var(--mono);font-size:11px;background:var(--surface2);color:var(--text2);padding:3px 10px;border-radius:20px;border:1px solid var(--border2)}
-.conn-pills{display:flex;gap:6px;margin-left:auto}
+.conn-pills{display:flex;gap:6px}
 .conn-pill{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-family:var(--mono);font-size:10px;color:var(--text2)}
 .conn-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 .conn-dot.ok{background:var(--montage)}
@@ -74,7 +80,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .suffix-input{width:70px;padding:5px 10px;background:var(--surface);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:12px;font-family:var(--mono);font-weight:600;letter-spacing:2px;text-transform:uppercase;outline:none}
 .suffix-input:focus{border-color:var(--accent2)}
 
-/* ── LAYOUT ── */
+/* ── PAGE SECTIONS ── */
+.page{display:none}
+.page.active{display:flex;flex-direction:column}
+
+/* ── LAYOUT (Dispo page) ── */
 .layout{display:grid;grid-template-columns:240px 1fr;height:calc(100vh - 57px)}
 
 /* ── SIDEBAR ── */
@@ -110,7 +120,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .empty-icon{font-size:32px;margin-bottom:10px;opacity:.25}
 .empty-txt{font-size:12px;color:var(--text3);line-height:1.7}
 
-/* ── MAIN ── */
+/* ── MAIN (dispo) ── */
 .main{overflow-y:auto;display:flex;flex-direction:column}
 .toolbar{display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;background:var(--bg);flex-wrap:wrap}
 .search-wrap{position:relative;flex:1;min-width:160px;max-width:240px}
@@ -136,55 +146,13 @@ tbody tr.has-montage{border-left:2px solid var(--montage)}
 tbody tr.no-montage{border-left:2px solid transparent}
 tbody tr.selected-row{background:rgba(59,130,246,0.07)!important;border-left:2px solid var(--blue)!important}
 
-/* ── DAY SEPARATOR ROW ── */
-.day-sep-row td {
-  padding:0 !important;
-  border:none !important;
-}
-.day-sep-inner {
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:14px 12px 6px;
-  margin-top:4px;
-}
-.day-sep-line {
-  flex:1;
-  height:1px;
-  background:linear-gradient(to right, var(--accent2), transparent);
-  opacity:.35;
-}
-.day-sep-label {
-  font-family:var(--cond);
-  font-size:15px;
-  font-weight:900;
-  color:var(--accent);
-  letter-spacing:.1em;
-  text-transform:uppercase;
-  white-space:nowrap;
-  padding:4px 12px;
-  background:var(--surface);
-  border:1px solid var(--border2);
-  border-radius:6px;
-}
-.day-sep-count {
-  font-family:var(--mono);
-  font-size:10px;
-  color:var(--text3);
-  white-space:nowrap;
-}
-.day-sep-montage {
-  font-family:var(--mono);
-  font-size:10px;
-  color:var(--montage);
-  white-space:nowrap;
-}
-.day-sep-line-right {
-  flex:1;
-  height:1px;
-  background:linear-gradient(to left, transparent, var(--border2));
-  opacity:.3;
-}
+.day-sep-row td{padding:0!important;border:none!important}
+.day-sep-inner{display:flex;align-items:center;gap:12px;padding:14px 12px 6px;margin-top:4px}
+.day-sep-line{flex:1;height:1px;background:linear-gradient(to right,var(--accent2),transparent);opacity:.35}
+.day-sep-label{font-family:var(--cond);font-size:15px;font-weight:900;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;padding:4px 12px;background:var(--surface);border:1px solid var(--border2);border-radius:6px}
+.day-sep-count{font-family:var(--mono);font-size:10px;color:var(--text3);white-space:nowrap}
+.day-sep-montage{font-family:var(--mono);font-size:10px;color:var(--montage);white-space:nowrap}
+.day-sep-line-right{flex:1;height:1px;background:linear-gradient(to left,transparent,var(--border2));opacity:.3}
 
 td{padding:8px 12px;vertical-align:middle}
 .td-date{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
@@ -203,20 +171,13 @@ td{padding:8px 12px;vertical-align:middle}
 .cb{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);background:var(--surface2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;font-size:10px}
 .cb.checked{background:var(--blue);border-color:var(--blue);color:#fff}
 
-/* ── SEND BUTTON in table ── */
 .send-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:700;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;border:1px solid;transition:all .15s;white-space:nowrap;background:transparent}
 .send-btn.idle{border-color:rgba(59,130,246,.3);color:var(--blue)}
 .send-btn.idle:hover{background:var(--blue-bg)}
 .send-btn.done{border-color:rgba(126,207,179,.3);color:var(--montage);cursor:default}
 .send-btn.sending{border-color:rgba(245,158,11,.3);color:#f59e0b;cursor:wait}
 
-/* ── GROUP DROPDOWN ── */
-.grp-dropdown{
-  position:fixed;z-index:9999;
-  background:#1a2030;border:1px solid #2d3f5c;
-  border-radius:12px;padding:6px;
-  min-width:260px;box-shadow:0 20px 50px rgba(0,0,0,.8);
-}
+.grp-dropdown{position:fixed;z-index:9999;background:#1a2030;border:1px solid #2d3f5c;border-radius:12px;padding:6px;min-width:260px;box-shadow:0 20px 50px rgba(0,0,0,.8)}
 .grp-drop-section{padding:4px 8px 2px;font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
 .grp-drop-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text);transition:background .1s;text-transform:uppercase;letter-spacing:.5px}
 .grp-drop-item:hover{background:rgba(59,130,246,.12)}
@@ -224,7 +185,6 @@ td{padding:8px 12px;vertical-align:middle}
 .ct-badge{font-size:8px;font-weight:800;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px;margin-left:auto}
 .grp-divider{height:1px;background:var(--border);margin:4px 4px}
 
-/* ── DAY VIEW ── */
 .day-view{display:none;padding:16px}
 .day-view.active{display:block}
 .day-col-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
@@ -241,16 +201,7 @@ td{padding:8px 12px;vertical-align:middle}
 .day-card-badges{display:flex;gap:3px;flex-wrap:wrap;align-items:center}
 .day-card-send{margin-left:auto}
 
-/* ── FLOATING SELECTION BAR ── */
-.sel-bar{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  z-index:5000;background:#1a2030;border:1.5px solid #2d4a7a;
-  border-radius:16px;padding:10px 18px;
-  display:flex;align-items:center;gap:12px;
-  box-shadow:0 20px 50px rgba(0,0,0,.8);
-  animation:barUp .25s cubic-bezier(.34,1.56,.64,1);
-  white-space:nowrap;
-}
+.sel-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:5000;background:#1a2030;border:1.5px solid #2d4a7a;border-radius:16px;padding:10px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.8);animation:barUp .25s cubic-bezier(.34,1.56,.64,1);white-space:nowrap}
 @keyframes barUp{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .sel-bar-cnt{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-family:var(--cond);font-size:20px;font-weight:900;border-radius:8px;padding:2px 14px;min-width:36px;text-align:center}
 .sel-bar-label{color:#fff;font-size:12px;font-weight:600}
@@ -258,7 +209,6 @@ td{padding:8px 12px;vertical-align:middle}
 .sel-bar-sep{width:1px;height:28px;background:var(--border)}
 .sel-bar-btn{padding:8px 16px;border-radius:9px;cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;border:1.5px solid;transition:all .15s;font-family:var(--cond);white-space:nowrap}
 
-/* ── MULTI SEND MODAL ── */
 .modal-bg{position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-box{width:100%;max-width:480px;background:#0f1520;border:1px solid #1e293b;border-radius:20px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.7)}
 .modal-head{background:linear-gradient(135deg,#1a2540,#0f1520);padding:18px 22px;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:12px}
@@ -287,18 +237,358 @@ td{padding:8px 12px;vertical-align:middle}
 .modal-send.disabled{background:#1e293b;color:#475569;cursor:not-allowed}
 .modal-done-state{text-align:center;padding:24px 0}
 
-/* ── TOAST ── */
 .toast-wrap{position:fixed;bottom:80px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:8px;box-shadow:0 16px 32px rgba(0,0,0,.5);animation:toastIn .25s ease-out;min-width:240px;max-width:360px;pointer-events:auto}
 .toast.success{border-color:rgba(126,207,179,.4)}
 .toast.error{border-color:rgba(240,128,128,.4)}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* ── LOADING ── */
 #loadOverlay{display:none;position:fixed;inset:0;background:rgba(15,15,15,.9);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 tbody tr{animation:fadeIn .12s ease both}
+
+/* ══════════════════════════════════════════════
+   KALENDER DASHBOARD
+══════════════════════════════════════════════ */
+.kal-page{
+  flex:1;overflow-y:auto;
+  display:flex;flex-direction:column;
+  height:calc(100vh - 57px);
+}
+
+/* Top bar */
+.kal-topbar{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 20px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg);
+  position:sticky;top:0;z-index:50;
+  flex-wrap:wrap;
+}
+.kal-topbar-title{
+  font-family:var(--cond);font-size:16px;font-weight:900;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;
+}
+.kal-quarter-wrap{display:flex;align-items:center;gap:8px;margin-left:auto}
+.kal-quarter-label{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.kal-quarter-select{
+  padding:5px 10px;background:var(--surface);border:1px solid var(--border2);
+  border-radius:7px;color:var(--text);font-size:12px;font-family:var(--mono);
+  outline:none;cursor:pointer;
+}
+.kal-quarter-select:focus{border-color:var(--accent2)}
+.kal-export-btns{display:flex;gap:6px}
+.kal-export-btn{
+  padding:6px 14px;border-radius:7px;border:1px solid;
+  cursor:pointer;font-size:11px;font-family:var(--cond);font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;transition:all .15s;
+}
+.kal-export-pdf{
+  border-color:rgba(240,128,128,.4);color:var(--fix);background:rgba(240,128,128,.06);
+}
+.kal-export-pdf:hover{background:rgba(240,128,128,.12)}
+.kal-export-xlsx{
+  border-color:rgba(126,207,179,.4);color:var(--montage);background:rgba(126,207,179,.06);
+}
+.kal-export-xlsx:hover{background:rgba(126,207,179,.12)}
+.kal-live-dot{width:7px;height:7px;border-radius:50%;background:var(--montage);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.kal-live-label{font-family:var(--mono);font-size:10px;color:var(--text3)}
+
+/* Stats strip */
+.kal-stats-strip{
+  display:flex;gap:12px;padding:12px 20px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.kal-stat{
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 16px;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;min-width:90px;flex-shrink:0;
+}
+.kal-stat-num{font-family:var(--mono);font-size:22px;font-weight:500;line-height:1}
+.kal-stat-lbl{font-size:10px;color:var(--text3);margin-top:3px;text-align:center}
+
+/* Kalender content */
+.kal-content{flex:1;overflow-y:auto;padding:0 0 80px}
+
+/* Group block */
+.kal-group{
+  border-bottom:2px solid var(--border);
+}
+.kal-group-header{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 20px 10px;
+  position:sticky;top:0;z-index:30;
+  background:rgba(15,15,15,.97);backdrop-filter:blur(6px);
+  cursor:pointer;
+  user-select:none;
+}
+.kal-group-header:hover{background:rgba(20,20,20,.98)}
+.kal-group-color-bar{width:4px;height:32px;border-radius:2px;flex-shrink:0}
+.kal-group-name{
+  font-family:var(--cond);font-size:20px;font-weight:900;
+  letter-spacing:.08em;text-transform:uppercase;flex:1;
+}
+.kal-group-meta{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.kal-group-collapse{
+  font-size:14px;color:var(--text3);transition:transform .2s;
+}
+.kal-group.collapsed .kal-group-collapse{transform:rotate(-90deg)}
+.kal-group-body{overflow:hidden;transition:max-height .3s ease}
+.kal-group.collapsed .kal-group-body{max-height:0!important}
+
+/* Timeline inside group */
+.kal-timeline{
+  padding:8px 20px 16px;
+  display:flex;flex-direction:column;gap:0;
+}
+
+/* Month separator inside timeline */
+.kal-month-sep{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 0 6px;
+}
+.kal-month-label{
+  font-family:var(--mono);font-size:10px;font-weight:500;
+  color:var(--text3);text-transform:uppercase;letter-spacing:.12em;
+  white-space:nowrap;
+}
+.kal-month-line{flex:1;height:1px;background:var(--border)}
+
+/* Calendar entry card — matches existing card style */
+.kal-entry{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  margin-bottom:6px;
+  transition:all .12s;
+  position:relative;
+  overflow:hidden;
+}
+.kal-entry::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+}
+.kal-entry.ct-montage::before{background:#3b82f6}
+.kal-entry.ct-beplankung::before{background:#10b981}
+.kal-entry.ct-ausflocken::before{background:#f97316}
+.kal-entry:hover{border-color:var(--border2);background:var(--surface2)}
+.kal-entry.is-done{opacity:.45}
+
+.kal-entry-date{
+  display:flex;flex-direction:column;align-items:center;
+  min-width:42px;padding:4px 0;
+  flex-shrink:0;
+}
+.kal-entry-day{
+  font-family:var(--cond);font-size:26px;font-weight:900;line-height:1;
+  color:var(--text);
+}
+.kal-entry-weekday{
+  font-family:var(--mono);font-size:9px;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.08em;
+}
+.kal-entry-month{
+  font-family:var(--mono);font-size:9px;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.08em;
+}
+
+.kal-entry-divider{
+  width:1px;background:var(--border);
+  align-self:stretch;flex-shrink:0;
+}
+
+.kal-entry-body{flex:1;min-width:0}
+.kal-entry-customer{
+  font-weight:600;font-size:14px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.kal-entry-address{
+  font-size:11px;color:var(--text3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-top:2px;
+}
+.kal-entry-meta{
+  display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  margin-top:6px;
+}
+.kal-entry-nr{
+  font-family:var(--mono);font-size:10px;color:var(--text3);
+}
+.kal-entry-memo{
+  font-size:11px;color:var(--text3);
+  font-style:italic;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:250px;
+}
+.kal-entry-ele{
+  font-family:var(--mono);font-size:11px;color:var(--accent2);
+  margin-left:auto;white-space:nowrap;
+}
+.kal-ct-pill{
+  font-family:var(--mono);font-size:9px;font-weight:700;
+  padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px;
+}
+.kal-ct-montage{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3)}
+.kal-ct-beplankung{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3)}
+.kal-ct-ausflocken{background:rgba(249,115,22,.15);color:#fb923c;border:1px solid rgba(249,115,22,.3)}
+.kal-done-pill{
+  font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;
+  background:rgba(126,207,179,.1);color:var(--montage);border:1px solid rgba(126,207,179,.2);
+}
+.kal-prov-pill{
+  font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;
+  background:var(--prov-bg);color:var(--prov);border:1px solid rgba(138,155,176,.2);
+}
+
+.kal-empty-group{
+  padding:20px;text-align:center;
+  font-size:12px;color:var(--text3);
+}
+
+/* Loading skeleton */
+.kal-skeleton{
+  height:64px;background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);
+  background-size:200% 100%;animation:shimmer 1.5s infinite;
+  border-radius:8px;margin-bottom:6px;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ══════════════════════════════════════════════
+   QUARTALS-EXPORT POPUP (CRITICAL)
+══════════════════════════════════════════════ */
+.qreminder-overlay{
+  position:fixed;inset:0;z-index:99999;
+  background:rgba(0,0,0,.92);backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  animation:qFadeIn .4s cubic-bezier(.16,1,.3,1);
+}
+@keyframes qFadeIn{from{opacity:0}to{opacity:1}}
+
+.qreminder-box{
+  width:100%;max-width:560px;
+  background:#0a0f1a;
+  border:2px solid #f59e0b;
+  border-radius:24px;
+  overflow:hidden;
+  box-shadow:0 0 80px rgba(245,158,11,.25), 0 40px 80px rgba(0,0,0,.8);
+  animation:qSlideUp .45s cubic-bezier(.16,1,.3,1);
+}
+@keyframes qSlideUp{from{opacity:0;transform:translateY(40px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.qreminder-top{
+  background:linear-gradient(135deg,#1a1000,#0a0f1a);
+  padding:32px 32px 24px;
+  text-align:center;
+  border-bottom:1px solid rgba(245,158,11,.2);
+}
+.qreminder-icon{
+  font-size:64px;margin-bottom:16px;
+  filter:drop-shadow(0 0 20px rgba(245,158,11,.5));
+  animation:qBounce 2s ease-in-out infinite;
+}
+@keyframes qBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+.qreminder-title{
+  font-family:var(--cond);font-size:36px;font-weight:900;
+  color:#f59e0b;letter-spacing:.1em;text-transform:uppercase;
+  line-height:1;margin-bottom:8px;
+  text-shadow:0 0 30px rgba(245,158,11,.4);
+}
+.qreminder-subtitle{
+  font-size:15px;color:#94a3b8;line-height:1.5;
+}
+.qreminder-subtitle strong{color:#f0ede8}
+
+.qreminder-body{padding:24px 32px}
+
+.qreminder-which{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;
+  background:rgba(245,158,11,.06);
+  border:1px solid rgba(245,158,11,.2);
+  border-radius:12px;
+  margin-bottom:16px;
+}
+.qreminder-which-label{
+  font-family:var(--mono);font-size:10px;color:#f59e0b;
+  text-transform:uppercase;letter-spacing:.1em;
+}
+.qreminder-quarter-select{
+  flex:1;padding:8px 12px;background:var(--surface);border:1px solid #f59e0b;
+  border-radius:8px;color:var(--text);font-size:13px;font-family:var(--mono);
+  outline:none;cursor:pointer;
+}
+
+.qreminder-actions{display:flex;gap:10px}
+.qreminder-btn{
+  flex:1;padding:14px 8px;border-radius:12px;cursor:pointer;
+  font-family:var(--cond);font-size:14px;font-weight:900;
+  text-transform:uppercase;letter-spacing:.8px;border:2px solid;
+  transition:all .15s;text-align:center;
+}
+.qreminder-pdf{
+  background:rgba(239,68,68,.12);border-color:#ef4444;color:#ef4444;
+}
+.qreminder-pdf:hover{background:rgba(239,68,68,.22);transform:scale(1.02)}
+.qreminder-xlsx{
+  background:rgba(16,185,129,.12);border-color:#10b981;color:#10b981;
+}
+.qreminder-xlsx:hover{background:rgba(16,185,129,.22);transform:scale(1.02)}
+.qreminder-skip{
+  background:transparent;border-color:var(--border);color:var(--text3);
+  font-size:11px;letter-spacing:.05em;
+}
+.qreminder-skip:hover{border-color:var(--border2);color:var(--text2)}
+
+.qreminder-note{
+  text-align:center;font-size:11px;color:var(--text3);margin-top:12px;
+  line-height:1.6;
+}
+.qreminder-note a{color:#f59e0b;cursor:pointer;text-decoration:underline}
+
+/* ══════════════════════════════════════════════
+   PRINT STYLES
+══════════════════════════════════════════════ */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .header,.kal-topbar,.kal-stats-strip,.kal-export-btns,
+  .sel-bar,.toast-wrap,#loadOverlay,.qreminder-overlay,
+  #page-dispo { display: none !important; }
+  #page-kalender { display: block !important; height: auto !important; overflow: visible !important; }
+  .kal-page { height: auto !important; overflow: visible !important; }
+  .kal-content { overflow: visible !important; }
+  .kal-group-body { max-height: none !important; }
+  .kal-group-header { position: static !important; background: #fff !important; break-inside: avoid; }
+  .kal-entry {
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .kal-entry.is-done { opacity: 1 !important; }
+  .kal-group-name { color: #000 !important; }
+  .kal-entry-customer { color: #000 !important; }
+  .kal-entry-address { color: #555 !important; }
+  .kal-group-color-bar { display: none !important; }
+  .kal-print-header {
+    display: block !important;
+    text-align: center;
+    padding: 20px 0 10px;
+    border-bottom: 2px solid #000;
+    margin-bottom: 16px;
+  }
+  .kal-print-header h1 { font-size: 24px; margin-bottom: 4px; }
+  .kal-print-header p { font-size: 13px; color: #555; }
+  .no-print { display: none !important; }
+}
+
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
@@ -313,17 +603,51 @@ tbody tr{animation:fadeIn .12s ease both}
 
 <div class="toast-wrap" id="toastWrap"></div>
 
+<!-- QUARTALS-ERINNERUNG POPUP -->
+<div class="qreminder-overlay" id="qReminderOverlay" style="display:none">
+  <div class="qreminder-box">
+    <div class="qreminder-top">
+      <div class="qreminder-icon">📦</div>
+      <div class="qreminder-title">Quartals-Export fällig!</div>
+      <div class="qreminder-subtitle">
+        <strong>3 Monate sind vergangen</strong> seit dem letzten Export.<br>
+        Bitte jetzt den Kalender exportieren und sicher ablegen.
+      </div>
+    </div>
+    <div class="qreminder-body">
+      <div class="qreminder-which">
+        <div class="qreminder-which-label">Quartal wählen:</div>
+        <select class="qreminder-quarter-select" id="qReminderQuarterSel"></select>
+      </div>
+      <div class="qreminder-actions">
+        <button class="qreminder-btn qreminder-pdf" onclick="qReminderExport('pdf')">📄 PDF exportieren</button>
+        <button class="qreminder-btn qreminder-xlsx" onclick="qReminderExport('xlsx')">📊 Excel exportieren</button>
+        <button class="qreminder-btn qreminder-skip" onclick="qReminderSnooze()">Später (7 Tage)</button>
+      </div>
+      <div class="qreminder-note">
+        Letzter Export: <span id="qLastExportDate">—</span> ·
+        <a onclick="dismissQReminder()">Erledigt, schliessen</a>
+      </div>
+    </div>
+  </div>
+</div>
+
 <header class="header">
   <div class="header-left">
     <span class="logo">Tourendispo</span>
     <span class="logo-sub">v4 · Multi-Kalender</span>
+  </div>
+  <!-- MAIN NAV TABS -->
+  <div class="main-tabs">
+    <button class="main-tab active" id="tab-dispo" onclick="switchPage('dispo')">📋 Dispo</button>
+    <button class="main-tab" id="tab-kalender" onclick="switchPage('kalender')">📅 Kalender</button>
   </div>
   <div class="conn-pills">
     <div class="conn-pill"><div class="conn-dot" id="dot-montage"></div><span>PE-MONTAGE</span></div>
     <div class="conn-pill"><div class="conn-dot" id="dot-kalender"></div><span id="kal-cnt">PE-KALENDER</span></div>
   </div>
   <span class="fw-badge" id="kwBadge">— Keine Datei —</span>
-  <div class="header-actions">
+  <div class="header-actions" id="dispo-header-actions">
     <div class="suffix-wrap">
       <span class="suffix-label">Kürzel</span>
       <input class="suffix-input" type="text" id="suffixInput" value="SLI" maxlength="8" placeholder="SLI" oninput="onSuffixChange(this)">
@@ -334,79 +658,121 @@ tbody tr{animation:fadeIn .12s ease both}
   </div>
 </header>
 
-<div class="layout">
-  <aside class="sidebar">
-    <div class="sb-section">
-      <div class="sb-label">Übersicht</div>
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-num gold" id="s-total">—</div><div class="kpi-lbl">Aufträge</div></div>
-        <div class="kpi"><div class="kpi-num green" id="s-montage">—</div><div class="kpi-lbl">Mit Montage</div></div>
-        <div class="kpi"><div class="kpi-num red" id="s-fix">—</div><div class="kpi-lbl">Termin FIX</div></div>
-        <div class="kpi"><div class="kpi-num blue" id="s-sent">0</div><div class="kpi-lbl">Gesendet</div></div>
+<!-- ══ PAGE: DISPO ══ -->
+<div class="page active" id="page-dispo">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sb-section">
+        <div class="sb-label">Übersicht</div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-num gold" id="s-total">—</div><div class="kpi-lbl">Aufträge</div></div>
+          <div class="kpi"><div class="kpi-num green" id="s-montage">—</div><div class="kpi-lbl">Mit Montage</div></div>
+          <div class="kpi"><div class="kpi-num red" id="s-fix">—</div><div class="kpi-lbl">Termin FIX</div></div>
+          <div class="kpi"><div class="kpi-num blue" id="s-sent">0</div><div class="kpi-lbl">Gesendet</div></div>
+        </div>
       </div>
-    </div>
-    <div class="sb-section">
-      <div class="sb-label">Tag</div>
-      <div class="day-pills" id="dayPills"></div>
-    </div>
-    <div class="sb-section">
-      <div class="sb-label">Filter</div>
-      <div class="type-filters" id="typeFilters">
-        <div class="type-filter active" data-filter="all" onclick="setTypeFilter('all',this)"><div class="type-dot" style="background:var(--text2)"></div>Alle<span class="type-count" id="cnt-all">—</span></div>
-        <div class="type-filter" data-filter="pe" onclick="setTypeFilter('pe',this)"><div class="type-dot" style="background:#f0c040"></div>⚡ PE-Aufträge<span class="type-count" id="cnt-pe">—</span></div>
-        <div class="type-filter" data-filter="montage" onclick="setTypeFilter('montage',this)"><div class="type-dot" style="background:var(--montage)"></div>Mit Montage<span class="type-count" id="cnt-montage">—</span></div>
-        <div class="type-filter" data-filter="fix" onclick="setTypeFilter('fix',this)"><div class="type-dot" style="background:var(--fix)"></div>Termin FIX<span class="type-count" id="cnt-fix">—</span></div>
-        <div class="type-filter" data-filter="notsent" onclick="setTypeFilter('notsent',this)"><div class="type-dot" style="background:var(--blue)"></div>Nicht gesendet<span class="type-count" id="cnt-notsent">—</span></div>
+      <div class="sb-section">
+        <div class="sb-label">Tag</div>
+        <div class="day-pills" id="dayPills"></div>
       </div>
-    </div>
-    <div class="sb-section">
-      <div class="sb-label">Kalender-Gruppen</div>
-      <div class="kal-teams" id="kalTeamsList">
-        <div style="font-size:11px;color:var(--text3);padding:4px 0">Verbinde…</div>
+      <div class="sb-section">
+        <div class="sb-label">Filter</div>
+        <div class="type-filters" id="typeFilters">
+          <div class="type-filter active" data-filter="all" onclick="setTypeFilter('all',this)"><div class="type-dot" style="background:var(--text2)"></div>Alle<span class="type-count" id="cnt-all">—</span></div>
+          <div class="type-filter" data-filter="pe" onclick="setTypeFilter('pe',this)"><div class="type-dot" style="background:#f0c040"></div>⚡ PE-Aufträge<span class="type-count" id="cnt-pe">—</span></div>
+          <div class="type-filter" data-filter="montage" onclick="setTypeFilter('montage',this)"><div class="type-dot" style="background:var(--montage)"></div>Mit Montage<span class="type-count" id="cnt-montage">—</span></div>
+          <div class="type-filter" data-filter="fix" onclick="setTypeFilter('fix',this)"><div class="type-dot" style="background:var(--fix)"></div>Termin FIX<span class="type-count" id="cnt-fix">—</span></div>
+          <div class="type-filter" data-filter="notsent" onclick="setTypeFilter('notsent',this)"><div class="type-dot" style="background:var(--blue)"></div>Nicht gesendet<span class="type-count" id="cnt-notsent">—</span></div>
+        </div>
       </div>
-    </div>
-    <div id="emptyState" class="empty-state">
-      <div class="empty-icon">📋</div>
-      <div class="empty-txt">Noch keine Daten.<br>Lade eine Excel-Datei.</div>
-    </div>
-  </aside>
+      <div class="sb-section">
+        <div class="sb-label">Kalender-Gruppen</div>
+        <div class="kal-teams" id="kalTeamsList">
+          <div style="font-size:11px;color:var(--text3);padding:4px 0">Verbinde…</div>
+        </div>
+      </div>
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-txt">Noch keine Daten.<br>Lade eine Excel-Datei.</div>
+      </div>
+    </aside>
 
-  <main class="main">
-    <div class="toolbar">
-      <div class="search-wrap">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/></svg>
-        <input class="search-input" type="text" id="search" placeholder="Kunde, Ort, Auftragsnr…" oninput="render()">
+    <main class="main">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/></svg>
+          <input class="search-input" type="text" id="search" placeholder="Kunde, Ort, Auftragsnr…" oninput="render()">
+        </div>
+        <div class="view-toggle">
+          <button class="view-btn active" id="btn-list" onclick="setView('list')">Liste</button>
+          <button class="view-btn" id="btn-day" onclick="setView('day')">Tage</button>
+        </div>
+        <button class="sel-btn" id="selModeBtn" onclick="toggleSelectMode()">☑ Auswählen</button>
+        <button class="hbtn green" id="btnSendAll" style="display:none;font-size:11px" onclick="openSendAll()">📤 Alle senden</button>
+        <span class="result-count" id="resultCount"></span>
       </div>
-      <div class="view-toggle">
-        <button class="view-btn active" id="btn-list" onclick="setView('list')">Liste</button>
-        <button class="view-btn" id="btn-day" onclick="setView('day')">Tage</button>
+      <div id="importBanner" style="display:none;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 14px;font-size:11px;color:#10b981;margin-bottom:8px;line-height:1.6;gap:8px;align-items:flex-start"></div>
+      <div class="table-container" id="listView">
+        <table>
+          <thead><tr>
+            <th class="cb-cell" id="th-cb" style="display:none"></th>
+            <th>Auftrag</th><th>Kunde / Projekt</th>
+            <th>Adresse</th><th style="text-align:right">ELE</th>
+            <th>Status</th><th>Memo</th><th>Senden</th>
+          </tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
       </div>
-      <button class="sel-btn" id="selModeBtn" onclick="toggleSelectMode()">☑ Auswählen</button>
-      <button class="hbtn green" id="btnSendAll" style="display:none;font-size:11px" onclick="openSendAll()">📤 Alle senden</button>
-      <span class="result-count" id="resultCount"></span>
-    </div>
-
-    <div id="importBanner" style="display:none;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 14px;font-size:11px;color:#10b981;margin-bottom:8px;line-height:1.6;gap:8px;align-items:flex-start">
-      <span style="cursor:pointer;margin-left:auto;color:var(--text3);font-size:14px;float:right" onclick="document.getElementById('importBanner').style.display='none'">✕</span>
-    </div>
-
-    <div class="table-container" id="listView">
-      <table>
-        <thead><tr>
-          <th class="cb-cell" id="th-cb" style="display:none"></th>
-          <th>Auftrag</th><th>Kunde / Projekt</th>
-          <th>Adresse</th><th style="text-align:right">ELE</th>
-          <th>Status</th><th>Memo</th><th>Senden</th>
-        </tr></thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
-    <div class="day-view" id="dayView">
-      <div class="day-col-grid" id="dayColGrid"></div>
-    </div>
-  </main>
+      <div class="day-view" id="dayView">
+        <div class="day-col-grid" id="dayColGrid"></div>
+      </div>
+    </main>
+  </div>
 </div>
 
+<!-- ══ PAGE: KALENDER ══ -->
+<div class="page" id="page-kalender">
+  <!-- hidden print header -->
+  <div class="kal-print-header" style="display:none">
+    <h1 id="printTitle">Kalender-Export</h1>
+    <p id="printSubtitle"></p>
+  </div>
+
+  <div class="kal-page">
+    <div class="kal-topbar">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="kal-live-dot"></div>
+        <span class="kal-live-label">Live</span>
+      </div>
+      <span class="kal-topbar-title">Kalender-Übersicht</span>
+      <div class="kal-quarter-wrap no-print">
+        <span class="kal-quarter-label">Quartal:</span>
+        <select class="kal-quarter-select" id="kalQuarterSel" onchange="filterKalByQuarter()">
+          <option value="all">Alle anzeigen</option>
+        </select>
+      </div>
+      <div class="kal-export-btns no-print">
+        <button class="kal-export-btn kal-export-pdf" onclick="exportKalPDF()">📄 PDF</button>
+        <button class="kal-export-btn kal-export-xlsx" onclick="exportKalXLSX()">📊 Excel</button>
+      </div>
+    </div>
+    <div class="kal-stats-strip" id="kalStatsStrip">
+      <div class="kal-stat"><div class="kal-stat-num" style="color:var(--accent)" id="ks-total">—</div><div class="kal-stat-lbl">Einträge gesamt</div></div>
+      <div class="kal-stat"><div class="kal-stat-num" style="color:var(--montage)" id="ks-done">—</div><div class="kal-stat-lbl">Erledigt</div></div>
+      <div class="kal-stat"><div class="kal-stat-num" style="color:var(--blue)" id="ks-open">—</div><div class="kal-stat-lbl">Offen</div></div>
+      <div class="kal-stat"><div class="kal-stat-num" style="color:var(--accent2)" id="ks-ele">—</div><div class="kal-stat-lbl">ELE gesamt</div></div>
+      <div class="kal-stat"><div class="kal-stat-num" style="color:#8b5cf6" id="ks-groups">—</div><div class="kal-stat-lbl">Gruppen</div></div>
+    </div>
+    <div class="kal-content" id="kalContent">
+      <div style="padding:40px;text-align:center;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:12px">📅</div>
+        <div style="font-family:var(--mono);font-size:12px">Lade Kalender-Daten…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SELECTION BAR -->
 <div class="sel-bar" id="selBar" style="display:none">
   <div class="sel-bar-cnt" id="selBarCnt">0</div>
   <div>
@@ -419,6 +785,7 @@ tbody tr{animation:fadeIn .12s ease both}
   <button class="sel-bar-btn" onclick="toggleSelectMode()" style="background:rgba(240,128,128,.08);border-color:rgba(240,128,128,.25);color:var(--fix)">✕</button>
 </div>
 
+<!-- MULTI SEND MODAL -->
 <div class="modal-bg" id="multiSendModal" style="display:none">
   <div class="modal-box">
     <div class="modal-head">
@@ -442,25 +809,40 @@ const CAL_TYPES = [
   { key:'beplankung', label:'Beplankung', icon:'🏗',  color:'#10b981', bg:'rgba(16,185,129,.15)', border:'rgba(16,185,129,.4)' },
   { key:'ausflocken', label:'Ausflocken', icon:'❄️',  color:'#f97316', bg:'rgba(249,115,22,.15)',  border:'rgba(249,115,22,.4)'  },
 ];
-
-// Weekday names for day separator
-const WEEKDAY_DE = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+const WEEKDAY_DE   = ['So','Mo','Di','Mi','Do','Fr','Sa'];
 const WEEKDAY_FULL = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+const MONTHS_DE    = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const MONTHS_FULL  = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 
 // ══════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════
-let state = [];
-let DAYS  = {};
-let kalenderTeams = [];
-let activeDay   = 'all';
-let typeFilter  = 'all';
-let currentView = 'list';
-let selectMode  = false;
-let selectedIds = new Set();
-let suffix = 'SLI';
-let rawRows = null;
+let state        = [];
+let DAYS         = {};
+let kalenderTeams= [];
+let activeDay    = 'all';
+let typeFilter   = 'all';
+let currentView  = 'list';
+let selectMode   = false;
+let selectedIds  = new Set();
+let suffix       = 'SLI';
+let rawRows      = null;
 let modalEntries = [];
+
+// Kalender dashboard state
+let kalAllEntries    = [];   // {groupId, groupName, groupColor, ...entry}
+let kalFilterQuarter = 'all';
+let kalGroupCollapsed= {};   // groupId -> bool
+
+// ══════════════════════════════════════════════
+// PAGE SWITCH
+// ══════════════════════════════════════════════
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('tab-' + page).classList.add('active');
+}
 
 // ══════════════════════════════════════════════
 // FIREBASE
@@ -470,30 +852,427 @@ document.getElementById('dot-kalender').className = 'conn-dot ' + (window._dbKal
 
 if (window._dbKalender) {
   window._dbKalender.collection('teams_config').onSnapshot(snap => {
-    kalenderTeams = snap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    kalenderTeams = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     document.getElementById('kal-cnt').textContent = `PE-KALENDER (${kalenderTeams.length})`;
     renderKalenderTeamsList();
     if (state.length) render();
+    // Load all kalender entries live
+    loadAllKalenderEntries();
   }, err => console.error(err));
 }
 
+// Load PE-Montage entries
+let _montageSub = null;
+function loadMontageEntries() {
+  if (!window._dbMontage) return;
+  if (_montageSub) _montageSub();
+  _montageSub = window._dbMontage
+    .collection('artifacts/montage-pe-a5f79/public/data/calentries')
+    .onSnapshot(snap => {
+      const entries = snap.docs.map(d => ({...d.data(), _src:'montage'}));
+      // Replace montage entries in kalAllEntries
+      const others = kalAllEntries.filter(e => e._src !== 'montage');
+      kalAllEntries = [
+        ...entries.map(e => ({
+          ...e,
+          groupId:    'urim',
+          groupName:  'URIM',
+          groupColor: '#3b82f6',
+          _src:       'montage',
+        })),
+        ...others
+      ];
+      updateKalStats();
+      renderKalContent();
+    }, err => console.warn('Montage entries err:', err));
+}
+
+// Load all kalender group entries
+let _kalSubs = {};
+function loadAllKalenderEntries() {
+  // Unsubscribe old
+  Object.values(_kalSubs).forEach(u => u && u());
+  _kalSubs = {};
+  kalenderTeams.forEach(team => {
+    _kalSubs[team.id] = window._dbKalender
+      .collection(`teams_cal_${team.id}`)
+      .onSnapshot(snap => {
+        const entries = snap.docs.map(d => ({...d.data(), _src:'kalender'}));
+        // Replace this team's entries
+        const others = kalAllEntries.filter(e => !(e._src==='kalender' && e.groupId===team.id));
+        kalAllEntries = [
+          ...others,
+          ...entries.map(e => ({
+            ...e,
+            groupId:    team.id,
+            groupName:  team.name,
+            groupColor: team.color || '#8a9bb0',
+            _src:       'kalender',
+          }))
+        ];
+        updateKalStats();
+        renderKalContent();
+      }, err => console.warn(`Kalender team ${team.id} err:`, err));
+  });
+}
+
+// Start loading montage entries immediately
+loadMontageEntries();
+
 function renderKalenderTeamsList() {
   const el = document.getElementById('kalTeamsList');
-  if (!kalenderTeams.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:4px 0">Keine Gruppen</div>'; return; }
+  if (!kalenderTeams.length) { el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Keine Gruppen</div>'; return; }
   el.innerHTML = kalenderTeams.map(t => `
     <div class="kal-team-row">
       <div class="kal-team-dot" style="background:${t.color||'#8a9bb0'}"></div>
       <span class="kal-team-name">${t.name}</span>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
+
+// ══════════════════════════════════════════════
+// KALENDER DASHBOARD
+// ══════════════════════════════════════════════
+function updateKalStats() {
+  const filtered = getKalFiltered();
+  const total  = filtered.length;
+  const done   = filtered.filter(e=>e.isDone).length;
+  const open   = total - done;
+  const ele    = filtered.reduce((s,e)=>s+(Number(e.target)||0),0);
+  const groups = new Set(filtered.map(e=>e.groupId)).size;
+  document.getElementById('ks-total').textContent = total;
+  document.getElementById('ks-done').textContent  = done;
+  document.getElementById('ks-open').textContent  = open;
+  document.getElementById('ks-ele').textContent   = ele > 0 ? ele : '—';
+  document.getElementById('ks-groups').textContent= groups;
+}
+
+function getKalFiltered() {
+  if (kalFilterQuarter === 'all') return kalAllEntries;
+  const [qYear, qQ] = kalFilterQuarter.split('-');
+  const year = parseInt(qYear);
+  const q    = parseInt(qQ);
+  const startMonth = (q - 1) * 3; // 0-indexed
+  const endMonth   = startMonth + 2;
+  return kalAllEntries.filter(e => {
+    const d = e.deliveryDate ? new Date(e.deliveryDate) : null;
+    if (!d || isNaN(d)) return false;
+    return d.getFullYear() === year && d.getMonth() >= startMonth && d.getMonth() <= endMonth;
+  });
+}
+
+function buildQuarterOptions() {
+  // Build from existing entries + current year
+  const quarters = new Set();
+  const now = new Date();
+  // Add last 4 years * 4 quarters
+  for (let y = now.getFullYear() - 1; y <= now.getFullYear() + 1; y++) {
+    for (let q = 1; q <= 4; q++) quarters.add(`${y}-${q}`);
+  }
+  kalAllEntries.forEach(e => {
+    const d = e.deliveryDate ? new Date(e.deliveryDate) : null;
+    if (!d || isNaN(d)) return;
+    const y = d.getFullYear();
+    const q = Math.floor(d.getMonth() / 3) + 1;
+    quarters.add(`${y}-${q}`);
+  });
+
+  const sorted = [...quarters].sort().reverse();
+  const currentQ = `${now.getFullYear()}-${Math.floor(now.getMonth()/3)+1}`;
+
+  // Populate both selects
+  ['kalQuarterSel','qReminderQuarterSel'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const prev = sel.value || (selId === 'kalQuarterSel' ? (kalFilterQuarter === 'all' ? 'all' : kalFilterQuarter) : currentQ);
+    sel.innerHTML = (selId === 'kalQuarterSel' ? '<option value="all">Alle anzeigen</option>' : '') +
+      sorted.map(k => {
+        const [y,q] = k.split('-');
+        const startM = (parseInt(q)-1)*3;
+        const label = `Q${q} ${y} (${MONTHS_DE[startM]}–${MONTHS_DE[startM+2]})`;
+        return `<option value="${k}"${prev===k?' selected':''}>${label}</option>`;
+      }).join('');
+  });
+}
+
+function filterKalByQuarter() {
+  kalFilterQuarter = document.getElementById('kalQuarterSel').value;
+  updateKalStats();
+  renderKalContent();
+}
+
+function renderKalContent() {
+  buildQuarterOptions();
+  const filtered = getKalFiltered();
+
+  if (filtered.length === 0 && kalAllEntries.length === 0) {
+    document.getElementById('kalContent').innerHTML = `
+      <div style="padding:60px;text-align:center;color:var(--text3)">
+        <div style="font-size:40px;margin-bottom:14px;opacity:.3">📅</div>
+        <div style="font-family:var(--mono);font-size:12px">Keine Kalender-Einträge gefunden</div>
+        <div style="font-size:11px;margin-top:6px">Verbinde Firebase und sende Aufträge</div>
+      </div>`;
+    return;
+  }
+
+  // Build groups: URIM first, then alphabetical
+  const groupMap = {};
+  filtered.forEach(e => {
+    if (!groupMap[e.groupId]) {
+      groupMap[e.groupId] = {
+        id:    e.groupId,
+        name:  e.groupName,
+        color: e.groupColor,
+        entries: [],
+      };
+    }
+    groupMap[e.groupId].entries.push(e);
+  });
+
+  // Sort groups: urim first
+  const groups = Object.values(groupMap).sort((a,b) => {
+    if (a.id === 'urim') return -1;
+    if (b.id === 'urim') return  1;
+    return a.name.localeCompare(b.name);
+  });
+
+  let html = '';
+  groups.forEach(g => {
+    const isCollapsed = kalGroupCollapsed[g.id] || false;
+    const sorted = [...g.entries].sort((a,b) => {
+      const da = a.deliveryDate || '';
+      const db = b.deliveryDate || '';
+      return da.localeCompare(db);
+    });
+    const doneCount = sorted.filter(e=>e.isDone).length;
+    const eleSum = sorted.reduce((s,e)=>s+(Number(e.target)||0),0);
+
+    html += `<div class="kal-group${isCollapsed?' collapsed':''}" id="grp-${g.id}">
+      <div class="kal-group-header" onclick="toggleKalGroup('${g.id}')">
+        <div class="kal-group-color-bar" style="background:${g.color}"></div>
+        <div class="kal-group-name" style="color:${g.color}">${g.name}</div>
+        <div class="kal-group-meta">${sorted.length} Eintr. · ${doneCount} erl. · ${eleSum > 0 ? eleSum + ' ELE' : ''}</div>
+        <div class="kal-group-collapse">▼</div>
+      </div>
+      <div class="kal-group-body" style="max-height:${isCollapsed?'0':'9999px'}">
+        <div class="kal-timeline">
+          ${renderKalGroupEntries(sorted, g.color)}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('kalContent').innerHTML = html || `
+    <div style="padding:40px;text-align:center;color:var(--text3);font-size:12px">
+      Keine Einträge für diesen Zeitraum
+    </div>`;
+}
+
+function renderKalGroupEntries(entries, groupColor) {
+  if (!entries.length) return '<div class="kal-empty-group">Keine Einträge</div>';
+
+  let html = '';
+  let lastMonth = null;
+
+  entries.forEach(e => {
+    const d = e.deliveryDate ? new Date(e.deliveryDate + (e.deliveryDate.length === 10 ? 'T00:00:00' : '')) : null;
+    const monthKey = d ? `${d.getFullYear()}-${d.getMonth()}` : 'unknown';
+
+    if (monthKey !== lastMonth) {
+      const mLabel = d ? `${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}` : 'Datum unbekannt';
+      html += `<div class="kal-month-sep">
+        <span class="kal-month-label">${mLabel}</span>
+        <div class="kal-month-line"></div>
+      </div>`;
+      lastMonth = monthKey;
+    }
+
+    const dayNum  = d ? String(d.getDate()).padStart(2,'0') : '—';
+    const weekday = d ? WEEKDAY_DE[d.getDay()] : '';
+    const monthSh = d ? MONTHS_DE[d.getMonth()] : '';
+    const ctKey   = e.calType || 'montage';
+    const ctCfg   = CAL_TYPES.find(x=>x.key===ctKey) || CAL_TYPES[0];
+
+    html += `<div class="kal-entry ct-${ctKey}${e.isDone?' is-done':''}">
+      <div class="kal-entry-date">
+        <div class="kal-entry-day">${dayNum}</div>
+        <div class="kal-entry-weekday">${weekday}</div>
+        <div class="kal-entry-month">${monthSh}</div>
+      </div>
+      <div class="kal-entry-divider"></div>
+      <div class="kal-entry-body">
+        <div class="kal-entry-customer">${e.customer || '—'}</div>
+        <div class="kal-entry-address">${e.address || ''}</div>
+        <div class="kal-entry-meta">
+          ${e.auftragsNr ? `<span class="kal-entry-nr">#${e.auftragsNr}</span>` : ''}
+          <span class="kal-ct-pill kal-ct-${ctKey}">${ctCfg.icon} ${ctCfg.label}</span>
+          ${e.isProv ? '<span class="kal-prov-pill">Prov.</span>' : ''}
+          ${e.isDone ? '<span class="kal-done-pill">✓ Erledigt</span>' : ''}
+          ${e.memo ? `<span class="kal-entry-memo" title="${e.memo}">📝 ${e.memo}</span>` : ''}
+          ${Number(e.target) > 0 ? `<span class="kal-entry-ele">${e.target} ELE</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+function toggleKalGroup(id) {
+  kalGroupCollapsed[id] = !kalGroupCollapsed[id];
+  const grpEl = document.getElementById('grp-' + id);
+  if (grpEl) {
+    grpEl.classList.toggle('collapsed', kalGroupCollapsed[id]);
+    const body = grpEl.querySelector('.kal-group-body');
+    if (body) body.style.maxHeight = kalGroupCollapsed[id] ? '0' : '9999px';
+    const arrow = grpEl.querySelector('.kal-group-collapse');
+    if (arrow) arrow.style.transform = kalGroupCollapsed[id] ? 'rotate(-90deg)' : '';
+  }
+}
+
+// ══════════════════════════════════════════════
+// EXPORT KALENDER
+// ══════════════════════════════════════════════
+function getSelectedQuarterLabel() {
+  const sel = document.getElementById('kalQuarterSel');
+  if (!sel || sel.value === 'all') return 'Alle Zeiträume';
+  const [y,q] = sel.value.split('-');
+  const startM = (parseInt(q)-1)*3;
+  return `Q${q} ${y} (${MONTHS_FULL[parseInt(startM)]}–${MONTHS_FULL[parseInt(startM)+2]})`;
+}
+
+function exportKalPDF() {
+  const label = getSelectedQuarterLabel();
+  document.getElementById('printTitle').textContent = 'Kalender-Export — ' + label;
+  document.getElementById('printSubtitle').textContent = 'Erstellt am ' + new Date().toLocaleDateString('de-CH') + ' · Tourendispo v4';
+  document.querySelector('.kal-print-header').style.display = 'block';
+  // Expand all groups for printing
+  document.querySelectorAll('.kal-group').forEach(g => {
+    g.classList.remove('collapsed');
+    const body = g.querySelector('.kal-group-body');
+    if (body) body.style.maxHeight = '9999px';
+  });
+  window.print();
+  document.querySelector('.kal-print-header').style.display = 'none';
+  markLastExport();
+}
+
+function exportKalXLSX() {
+  const filtered = getKalFiltered();
+  const label    = getSelectedQuarterLabel();
+  const rows     = [['Gruppe','Datum','Wochentag','Kunde','Adresse','Auftragsnr','Typ','ELE','Memo','Erledigt','Provisorisch']];
+
+  filtered
+    .sort((a,b) => (a.groupName||'').localeCompare(b.groupName||'') || (a.deliveryDate||'').localeCompare(b.deliveryDate||''))
+    .forEach(e => {
+      const d  = e.deliveryDate ? new Date(e.deliveryDate + (e.deliveryDate.length===10?'T00:00:00':'')) : null;
+      const dt = d && !isNaN(d) ? d.toLocaleDateString('de-CH') : e.deliveryDate || '';
+      const wd = d && !isNaN(d) ? WEEKDAY_FULL[d.getDay()] : '';
+      const ct = CAL_TYPES.find(x=>x.key===(e.calType||'montage'))?.label || e.calType || '';
+      rows.push([
+        e.groupName || '',
+        dt, wd,
+        e.customer || '',
+        e.address  || '',
+        e.auftragsNr || '',
+        ct,
+        Number(e.target) || '',
+        e.memo || '',
+        e.isDone ? 'Ja' : 'Nein',
+        e.isProv ? 'Ja' : 'Nein',
+      ]);
+    });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:18},{wch:12},{wch:12},{wch:28},{wch:32},{wch:16},{wch:12},{wch:7},{wch:30},{wch:9},{wch:13}
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, label.substring(0,31));
+  XLSX.writeFile(wb, `Kalender_Export_${label.replace(/\s+/g,'_')}.xlsx`);
+  markLastExport();
+  showToast('success','✅ Excel exportiert!');
+}
+
+function exportKalPDFFromReminder() {
+  const qSel = document.getElementById('qReminderQuarterSel');
+  if (qSel) {
+    document.getElementById('kalQuarterSel').value = qSel.value;
+    kalFilterQuarter = qSel.value;
+    updateKalStats();
+    renderKalContent();
+  }
+  dismissQReminder();
+  switchPage('kalender');
+  setTimeout(() => exportKalPDF(), 200);
+}
+function exportKalXLSXFromReminder() {
+  const qSel = document.getElementById('qReminderQuarterSel');
+  if (qSel) {
+    document.getElementById('kalQuarterSel').value = qSel.value;
+    kalFilterQuarter = qSel.value;
+    updateKalStats();
+    renderKalContent();
+  }
+  dismissQReminder();
+  switchPage('kalender');
+  setTimeout(() => exportKalXLSX(), 200);
+}
+function qReminderExport(type) {
+  if (type === 'pdf') exportKalPDFFromReminder();
+  else exportKalXLSXFromReminder();
+}
+
+// ══════════════════════════════════════════════
+// QUARTALS-ERINNERUNG
+// ══════════════════════════════════════════════
+const Q_LAST_EXPORT_KEY = 'td_lastExport';
+const Q_SNOOZE_KEY      = 'td_exportSnooze';
+const Q_INTERVAL_DAYS   = 90; // 3 months
+const Q_SNOOZE_DAYS     = 7;
+
+function markLastExport() {
+  localStorage.setItem(Q_LAST_EXPORT_KEY, Date.now().toString());
+  localStorage.removeItem(Q_SNOOZE_KEY);
+  document.getElementById('qLastExportDate').textContent = new Date().toLocaleDateString('de-CH');
+}
+function dismissQReminder() {
+  markLastExport();
+  document.getElementById('qReminderOverlay').style.display = 'none';
+}
+function qReminderSnooze() {
+  localStorage.setItem(Q_SNOOZE_KEY, (Date.now() + Q_SNOOZE_DAYS * 86400000).toString());
+  document.getElementById('qReminderOverlay').style.display = 'none';
+}
+
+function checkQReminder() {
+  const snoozeUntil = parseInt(localStorage.getItem(Q_SNOOZE_KEY) || '0');
+  if (snoozeUntil > Date.now()) return; // snoozed
+
+  const lastExport = parseInt(localStorage.getItem(Q_LAST_EXPORT_KEY) || '0');
+  const daysSince  = (Date.now() - lastExport) / 86400000;
+
+  const lastExportStr = lastExport > 0
+    ? new Date(lastExport).toLocaleDateString('de-CH')
+    : 'Noch nie exportiert';
+  document.getElementById('qLastExportDate').textContent = lastExportStr;
+
+  if (lastExport === 0 || daysSince >= Q_INTERVAL_DAYS) {
+    buildQuarterOptions();
+    document.getElementById('qReminderOverlay').style.display = 'flex';
+  }
+}
+
+// Check after a short delay (so page loads first)
+setTimeout(checkQReminder, 1800);
 
 // ══════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════
 const genId = () => { try{const u=crypto.randomUUID();if(u)return u;}catch(e){} return Math.random().toString(36).slice(2)+Date.now().toString(36); };
 const cleanAuftragsNr = (nr) => String(nr||'').replace(/\s*\/\s*SLI\s*/gi,'').replace(/\s*\/\s*[A-Z]{2,6}\s*/gi,'').trim();
-const toLocalDateStr = (d) => { if(!d)return''; const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
+const toLocalDateStr  = (d)  => { if(!d)return''; const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
 
 function parseCalTypes(calType) {
   if(!calType||calType==='montage') return ['montage'];
@@ -503,370 +1282,201 @@ function parseCalTypes(calType) {
   try{const a=JSON.parse(calType);if(Array.isArray(a))return a;}catch(e){}
   return ['montage'];
 }
-
 function sortPriority(d) {
-  if(d.has_montage && d.termin_fix) return 1;
-  if(d.has_montage) return 2;
-  if(d.termin_fix)  return 3;
+  if(d.has_montage&&d.termin_fix)return 1;
+  if(d.has_montage)return 2;
+  if(d.termin_fix)return 3;
   return 4;
 }
-
 function formatDayLabel(dateStr) {
-  // dateStr = "2026-06-01"
-  const d = new Date(dateStr + 'T00:00:00');
-  const wd = WEEKDAY_FULL[d.getDay()];
-  const day = String(d.getDate()).padStart(2,'0');
-  const month = String(d.getMonth()+1).padStart(2,'0');
-  return `${wd}, ${day}.${month}.`;
+  const d=new Date(dateStr+'T00:00:00');
+  return `${WEEKDAY_FULL[d.getDay()]}, ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`;
 }
 
 // ══════════════════════════════════════════════
 // EXCEL PARSE
-// Col A (0) = Datum
-// Col B (1) = Memo1  
-// Col C (2) = Memo2 → goes to memo field (ELE info, house info)
-// Col D (3) = Auftragsnr
-// Col E (4) = Kunde
-// Col F (5) = Projekt/Adresse description
-// Col G (6) = Strasse
-// Col H (7) = PLZ
-// Col I (8) = Ort
-// Col J (9) = ELE count
 // ══════════════════════════════════════════════
-function showOverlay(msg) { const o=document.getElementById('loadOverlay'); o.style.display='flex'; document.getElementById('loadMsg').textContent=msg||'Wird geladen…'; }
-function hideOverlay() { document.getElementById('loadOverlay').style.display='none'; }
-
-function onSuffixChange(el) {
-  suffix = el.value.toUpperCase();
-  if (rawRows) processRows(rawRows);
-}
+function showOverlay(msg){const o=document.getElementById('loadOverlay');o.style.display='flex';document.getElementById('loadMsg').textContent=msg||'Wird geladen…'}
+function hideOverlay(){document.getElementById('loadOverlay').style.display='none'}
+function onSuffixChange(el){suffix=el.value.toUpperCase();if(rawRows)processRows(rawRows)}
 
 function loadExcel(input) {
-  const file = input.files ? input.files[0] : input;
-  if (!file) return;
+  const file = input.files?input.files[0]:input;
+  if(!file)return;
   showOverlay('Excel wird gelesen…');
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
       showOverlay('Daten werden verarbeitet…');
-      const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, {type:'array', cellDates:true});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      rawRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-
-      let kwLabel = '';
-      try {
-        const vonRow = rawRows.find(r => String(r[0]).includes('Datum von'));
-        const bisRow = rawRows.find(r => String(r[0]).includes('Datum bis'));
-        if (vonRow && bisRow) {
-          const fmtDate = v => {
-            if (v instanceof Date) return v.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      rawRows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      let kwLabel='';
+      try{
+        const vonRow=rawRows.find(r=>String(r[0]).includes('Datum von'));
+        const bisRow=rawRows.find(r=>String(r[0]).includes('Datum bis'));
+        if(vonRow&&bisRow){
+          const fmtDate=v=>{
+            if(v instanceof Date)return v.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
             return String(v).replace(/(\d{4})\.(\d{2})\.(\d{2})/,'$3.$2.$1');
           };
-          kwLabel = fmtDate(vonRow[1]) + ' – ' + fmtDate(bisRow[1]);
+          kwLabel=fmtDate(vonRow[1])+' – '+fmtDate(bisRow[1]);
         }
-      } catch(e){}
-
-      const fname = (file.name||'').replace(/\.(xlsx?|xltm)$/i,'');
-      document.getElementById('kwBadge').textContent = fname + (kwLabel ? ' · ' + kwLabel : '');
-
+      }catch(e){}
+      const fname=(file.name||'').replace(/\.(xlsx?|xltm)$/i,'');
+      document.getElementById('kwBadge').textContent=fname+(kwLabel?' · '+kwLabel:'');
       processRows(rawRows);
       hideOverlay();
-    } catch(err) {
-      hideOverlay();
-      console.error(err);
-      alert('Fehler beim Lesen:\n' + err.message);
-    }
-    if (input.value !== undefined) input.value = '';
+    }catch(err){hideOverlay();console.error(err);alert('Fehler beim Lesen:\n'+err.message)}
+    if(input.value!==undefined)input.value='';
   };
   reader.readAsArrayBuffer(file);
 }
 
 function processRows(rows) {
-  let headerIdx = rows.findIndex(r => r.some(c => String(c).includes('Lieferdatum')));
-  if (headerIdx < 0) headerIdx = 6;
-  const dataRows = rows.slice(headerIdx + 1);
-
-  const parsed = [];
-  const dayMap = {};
-
-  dataRows.forEach(row => {
-    // Col A = Datum
-    let rawDate = row[0];
-    if (!rawDate) return;
+  let headerIdx=rows.findIndex(r=>r.some(c=>String(c).includes('Lieferdatum')));
+  if(headerIdx<0)headerIdx=6;
+  const dataRows=rows.slice(headerIdx+1);
+  const parsed=[],dayMap={};
+  dataRows.forEach(row=>{
+    let rawDate=row[0];
+    if(!rawDate)return;
     let dateObj;
-    if (rawDate instanceof Date) {
-      dateObj = rawDate;
-    } else {
-      const s = String(rawDate).trim();
-      if (/^\d{4}\.\d{2}\.\d{2}$/.test(s)) {
-        dateObj = new Date(s.replace(/(\d{4})\.(\d{2})\.(\d{2})/, '$1-$2-$3'));
-      } else if (/^\d{5}$/.test(s)) {
-        dateObj = new Date((parseInt(s) - 25569) * 86400000);
-      } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-        dateObj = new Date(s);
-      } else {
-        return;
-      }
+    if(rawDate instanceof Date){dateObj=rawDate}
+    else{
+      const s=String(rawDate).trim();
+      if(/^\d{4}\.\d{2}\.\d{2}$/.test(s))dateObj=new Date(s.replace(/(\d{4})\.(\d{2})\.(\d{2})/,'$1-$2-$3'));
+      else if(/^\d{5}$/.test(s))dateObj=new Date((parseInt(s)-25569)*86400000);
+      else if(/^\d{4}-\d{2}-\d{2}/.test(s))dateObj=new Date(s);
+      else return;
     }
-    if (!dateObj || isNaN(dateObj.getTime())) return;
-
-    const datum = toLocalDateStr(dateObj);
-    const shortDate = dateObj.toLocaleDateString('de-CH', {weekday:'short', day:'2-digit', month:'2-digit'});
-    if (!dayMap[datum]) dayMap[datum] = shortDate;
-
-    // Col B = Memo1 (internal notes, avis info)
-    const memo1 = String(row[1]||'').replace(/\n/g,' ').trim();
-    // Col C = Memo2 → ELE info / Haus info → goes directly into memo for calendar
-    const memo2 = String(row[2]||'').replace(/\n/g,' ').trim();
-    
-    const combined = (memo1 + ' ' + memo2).toLowerCase();
-
-    // Col D = Auftragsnr
-    const auftrag = String(row[3]||'').trim();
-    // Col E = Kunde
-    const kunde   = String(row[4]||'').trim();
-    // Col F = Projekt (beschreibung)
-    const projekt = String(row[5]||'').trim();
-    // Col G = Strasse
-    const strasse = String(row[6]||'').trim();
-    // Col H = PLZ
-    const plz     = String(row[7]||'').trim();
-    // Col I = Ort
-    const ort     = String(row[8]||'').trim();
-    // Col J = ELE count
-    const eleRaw  = row[9];
-    const eleNum  = (eleRaw && !isNaN(Number(eleRaw))) ? Number(eleRaw) : 0;
-
-    // Address: Strasse + PLZ + Ort (from cols G, H, I)
-    const adresse = [strasse, [plz, ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-
-    // Memo for calendar entry = Col C content (ELE / Haus info)
-    // Trim trailing " -" or dashes
-    const memoForCalendar = memo2.replace(/\s*-\s*$/, '').trim() || memo1.replace(/\s*-\s*$/, '').trim() || '';
-
-    if (!kunde && !auftrag) return;
-
+    if(!dateObj||isNaN(dateObj.getTime()))return;
+    const datum=toLocalDateStr(dateObj);
+    const shortDate=dateObj.toLocaleDateString('de-CH',{weekday:'short',day:'2-digit',month:'2-digit'});
+    if(!dayMap[datum])dayMap[datum]=shortDate;
+    const memo1=String(row[1]||'').replace(/\n/g,' ').trim();
+    const memo2=String(row[2]||'').replace(/\n/g,' ').trim();
+    const combined=(memo1+' '+memo2).toLowerCase();
+    const auftrag=String(row[3]||'').trim();
+    const kunde  =String(row[4]||'').trim();
+    const projekt=String(row[5]||'').trim();
+    const strasse=String(row[6]||'').trim();
+    const plz    =String(row[7]||'').trim();
+    const ort    =String(row[8]||'').trim();
+    const eleRaw =row[9];
+    const eleNum =(eleRaw&&!isNaN(Number(eleRaw)))?Number(eleRaw):0;
+    const adresse=[strasse,[plz,ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    const memoForCalendar=memo2.replace(/\s*-\s*$/,'').trim()||memo1.replace(/\s*-\s*$/,'').trim()||'';
+    if(!kunde&&!auftrag)return;
     parsed.push({
-      _id:      genId(),
-      datum,
-      // For display
-      auftrag,
-      auftragsNr: auftrag ? `${auftrag}/${suffix}` : '',
-      kunde,
-      projekt,
-      strasse,
-      plz,
-      ort,
-      eleNum,
-      has_montage:  combined.includes('montage'),
-      termin_fix:   combined.includes('fix') && !combined.includes('noch nicht fix'),
-      pe_relevant:  combined.includes('montage') && combined.includes('fix') && !combined.includes('noch nicht fix'),
-      memo:        memoForCalendar,
-      // For Firebase send — exactly matching what calendar expects
-      customer:     kunde,           // Col E
-      address:      adresse,         // Col G + H + I
-      auftragsNrClean: cleanAuftragsNr(auftrag), // Col D (clean, no suffix)
-      target:       eleNum,          // Col J
-      date:         datum,
-      sentTo: [],
+      _id:genId(),datum,auftrag,auftragsNr:auftrag?`${auftrag}/${suffix}`:'',
+      kunde,projekt,strasse,plz,ort,eleNum,
+      has_montage:combined.includes('montage'),
+      termin_fix:combined.includes('fix')&&!combined.includes('noch nicht fix'),
+      pe_relevant:combined.includes('montage')&&combined.includes('fix')&&!combined.includes('noch nicht fix'),
+      memo:memoForCalendar,
+      customer:kunde,address:adresse,auftragsNrClean:cleanAuftragsNr(auftrag),
+      target:eleNum,date:datum,sentTo:[],
     });
   });
-
-  if (parsed.length === 0) {
-    hideOverlay();
-    alert('Keine Daten gefunden. Bitte Dateiformat prüfen.');
-    return;
+  if(!parsed.length){hideOverlay();alert('Keine Daten gefunden.');return}
+  Object.keys(DAYS).forEach(k=>delete DAYS[k]);
+  Object.entries(dayMap).sort().forEach(([d,l])=>DAYS[d]=l);
+  state=parsed;selectedIds=new Set();selectMode=false;activeDay='all';
+  document.getElementById('search').value='';
+  const peCount=parsed.filter(d=>d.pe_relevant).length;
+  const allCount=parsed.length;
+  const fixOhneMontage=parsed.filter(d=>d.termin_fix&&!d.has_montage);
+  typeFilter=peCount>0?'pe':'all';
+  document.querySelectorAll('.type-filter').forEach(e=>e.classList.toggle('active',e.dataset.filter===typeFilter));
+  const banner=document.getElementById('importBanner');
+  if(banner){
+    const hidden=allCount-peCount;
+    let warn='';
+    if(fixOhneMontage.length>0){const names=fixOhneMontage.slice(0,3).map(d=>d.kunde).join(', ');warn=`<br><span style="color:#f0c040">⚠ ${fixOhneMontage.length} Auftrag${fixOhneMontage.length>1?'e':''} mit FIX aber ohne Montage-Text (${names}${fixOhneMontage.length>3?' …':''}) → manuell prüfen</span>`}
+    banner.innerHTML=`✅ <strong>${peCount} PE-Aufträge</strong> (Montage + FIX) aus ${allCount} Einträgen importiert — ${hidden} ausgeblendet${warn}`;
+    banner.style.display='flex';
   }
-
-  Object.keys(DAYS).forEach(k => delete DAYS[k]);
-  Object.entries(dayMap).sort().forEach(([d,l]) => DAYS[d] = l);
-
-  state = parsed;
-  selectedIds = new Set();
-  selectMode = false;
-  activeDay = 'all';
-  document.getElementById('search').value = '';
-
-  // Auto-Filter: PE-Aufträge (Montage + FIX) beim Import automatisch aktivieren
-  const peCount  = parsed.filter(d => d.pe_relevant).length;
-  const allCount = parsed.length;
-  const fixOhneMontage = parsed.filter(d => d.termin_fix && !d.has_montage);
-  typeFilter = peCount > 0 ? 'pe' : 'all';
-  document.querySelectorAll('.type-filter').forEach(e => {
-    e.classList.toggle('active', e.dataset.filter === typeFilter);
-  });
-
-  // Import-Banner anzeigen
-  const banner = document.getElementById('importBanner');
-  if (banner) {
-    const hidden = allCount - peCount;
-    let warn = '';
-    if (fixOhneMontage.length > 0) {
-      const names = fixOhneMontage.slice(0,3).map(d=>d.kunde).join(', ');
-      warn = `<br><span style="color:#f0c040">⚠ ${fixOhneMontage.length} Auftrag${fixOhneMontage.length>1?'e':''} mit FIX aber ohne Montage-Text (${names}${fixOhneMontage.length>3?' …':''}) → manuell prüfen</span>`;
-    }
-    banner.innerHTML = `✅ <strong>${peCount} PE-Aufträge</strong> (Montage + FIX) aus ${allCount} Einträgen importiert — ${hidden} ausgeblendet${warn}`;
-    banner.style.display = 'flex';
-  }
-  document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('btnSendAll').style.display = 'inline-flex';
-  document.getElementById('btnExport').style.display = 'inline-block';
-  updateKPIs();
-  render();
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('btnSendAll').style.display='inline-flex';
+  document.getElementById('btnExport').style.display='inline-block';
+  updateKPIs();render();
 }
 
 // ══════════════════════════════════════════════
 // KPIs
 // ══════════════════════════════════════════════
-function updateKPIs() {
-  const mont = state.filter(d=>d.has_montage).length;
-  const fix  = state.filter(d=>d.termin_fix).length;
-  const pe   = state.filter(d=>d.pe_relevant).length;
-  const sent = state.filter(d=>d.sentTo && d.sentTo.length>0).length;
-  document.getElementById('s-total').textContent   = state.length;
-  document.getElementById('s-montage').textContent = mont;
-  document.getElementById('s-fix').textContent     = fix;
-  document.getElementById('s-sent').textContent    = sent;
-  document.getElementById('cnt-all').textContent   = state.length;
-  document.getElementById('cnt-pe').textContent    = pe;
-  document.getElementById('cnt-montage').textContent = mont;
-  document.getElementById('cnt-fix').textContent   = fix;
-  document.getElementById('cnt-notsent').textContent = state.filter(d=>!d.sentTo||d.sentTo.length===0).length;
+function updateKPIs(){
+  const mont=state.filter(d=>d.has_montage).length;
+  const fix=state.filter(d=>d.termin_fix).length;
+  const pe=state.filter(d=>d.pe_relevant).length;
+  const sent=state.filter(d=>d.sentTo&&d.sentTo.length>0).length;
+  document.getElementById('s-total').textContent=state.length;
+  document.getElementById('s-montage').textContent=mont;
+  document.getElementById('s-fix').textContent=fix;
+  document.getElementById('s-sent').textContent=sent;
+  document.getElementById('cnt-all').textContent=state.length;
+  document.getElementById('cnt-pe').textContent=pe;
+  document.getElementById('cnt-montage').textContent=mont;
+  document.getElementById('cnt-fix').textContent=fix;
+  document.getElementById('cnt-notsent').textContent=state.filter(d=>!d.sentTo||d.sentTo.length===0).length;
 }
 
 // ══════════════════════════════════════════════
 // FILTER
 // ══════════════════════════════════════════════
-function getFiltered() {
-  const q = document.getElementById('search').value.toLowerCase();
-  return state.filter(d => {
-    if (activeDay !== 'all' && d.datum !== activeDay) return false;
-    if (typeFilter === 'pe'       && !d.pe_relevant)  return false;
-    if (typeFilter === 'montage'  && !d.has_montage) return false;
-    if (typeFilter === 'fix'      && !d.termin_fix)  return false;
-    if (typeFilter === 'notsent'  && d.sentTo && d.sentTo.length>0) return false;
-    if (q && !d.kunde.toLowerCase().includes(q)
-           && !d.ort.toLowerCase().includes(q)
-           && !(d.auftrag||'').includes(q)
-           && !(d.projekt||'').toLowerCase().includes(q)) return false;
+function getFiltered(){
+  const q=document.getElementById('search').value.toLowerCase();
+  return state.filter(d=>{
+    if(activeDay!=='all'&&d.datum!==activeDay)return false;
+    if(typeFilter==='pe'&&!d.pe_relevant)return false;
+    if(typeFilter==='montage'&&!d.has_montage)return false;
+    if(typeFilter==='fix'&&!d.termin_fix)return false;
+    if(typeFilter==='notsent'&&d.sentTo&&d.sentTo.length>0)return false;
+    if(q&&!d.kunde.toLowerCase().includes(q)&&!d.ort.toLowerCase().includes(q)&&!(d.auftrag||'').includes(q)&&!(d.projekt||'').toLowerCase().includes(q))return false;
     return true;
-  }).sort((a,b) => {
-    if (a.datum !== b.datum) return a.datum.localeCompare(b.datum);
-    return sortPriority(a) - sortPriority(b);
-  });
+  }).sort((a,b)=>{if(a.datum!==b.datum)return a.datum.localeCompare(b.datum);return sortPriority(a)-sortPriority(b)});
 }
-
-function setDayFilter(d) {
-  activeDay = activeDay === d ? 'all' : d;
-  document.querySelectorAll('.day-pill').forEach(el => el.classList.toggle('active', el.dataset.day === activeDay));
-  render();
-}
-function setTypeFilter(f, el) {
-  typeFilter = f;
-  document.querySelectorAll('.type-filter').forEach(e => e.classList.remove('active'));
-  el.classList.add('active');
-  render();
-}
-function setView(v) {
-  currentView = v;
-  document.getElementById('listView').style.display  = v === 'list' ? 'block' : 'none';
-  document.getElementById('dayView').classList.toggle('active', v === 'day');
-  document.getElementById('btn-list').classList.toggle('active', v === 'list');
-  document.getElementById('btn-day').classList.toggle('active',  v === 'day');
-  render();
-}
+function setDayFilter(d){activeDay=activeDay===d?'all':d;document.querySelectorAll('.day-pill').forEach(el=>el.classList.toggle('active',el.dataset.day===activeDay));render()}
+function setTypeFilter(f,el){typeFilter=f;document.querySelectorAll('.type-filter').forEach(e=>e.classList.remove('active'));el.classList.add('active');render()}
+function setView(v){currentView=v;document.getElementById('listView').style.display=v==='list'?'block':'none';document.getElementById('dayView').classList.toggle('active',v==='day');document.getElementById('btn-list').classList.toggle('active',v==='list');document.getElementById('btn-day').classList.toggle('active',v==='day');render()}
 
 // ══════════════════════════════════════════════
 // SELECT MODE
 // ══════════════════════════════════════════════
-function toggleSelectMode() {
-  selectMode = !selectMode;
-  selectedIds = new Set();
-  const btn = document.getElementById('selModeBtn');
-  btn.classList.toggle('active', selectMode);
-  btn.textContent = selectMode ? '✕ Abbrechen' : '☑ Auswählen';
-  document.getElementById('th-cb').style.display = selectMode ? 'table-cell' : 'none';
-  document.getElementById('selBar').style.display = 'none';
-  render();
-}
-function toggleSelect(id) {
-  selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
-  updateSelBar();
-  const tr = document.querySelector(`tr[data-row-id="${id}"]`);
-  if (tr) {
-    const isNowSelected = selectedIds.has(id);
-    tr.classList.toggle('selected-row', isNowSelected);
-    const cb = tr.querySelector('.cb');
-    if (cb) cb.classList.toggle('checked', isNowSelected);
-  }
-}
-function clearSelection() {
-  selectedIds = new Set();
-  updateSelBar();
-  document.querySelectorAll('tr.selected-row').forEach(tr => {
-    tr.classList.remove('selected-row');
-    const cb = tr.querySelector('.cb');
-    if (cb) cb.classList.remove('checked');
-  });
-}
-function updateSelBar() {
-  const bar = document.getElementById('selBar');
-  const cnt = selectedIds.size;
-  bar.style.display = (selectMode && cnt > 0) ? 'flex' : 'none';
-  document.getElementById('selBarCnt').textContent = cnt;
-  document.getElementById('selBarLabel').textContent = cnt + ' Aufträge markiert';
-}
+function toggleSelectMode(){selectMode=!selectMode;selectedIds=new Set();const btn=document.getElementById('selModeBtn');btn.classList.toggle('active',selectMode);btn.textContent=selectMode?'✕ Abbrechen':'☑ Auswählen';document.getElementById('th-cb').style.display=selectMode?'table-cell':'none';document.getElementById('selBar').style.display='none';render()}
+function toggleSelect(id){selectedIds.has(id)?selectedIds.delete(id):selectedIds.add(id);updateSelBar();const tr=document.querySelector(`tr[data-row-id="${id}"]`);if(tr){const isSel=selectedIds.has(id);tr.classList.toggle('selected-row',isSel);const cb=tr.querySelector('.cb');if(cb)cb.classList.toggle('checked',isSel)}}
+function clearSelection(){selectedIds=new Set();updateSelBar();document.querySelectorAll('tr.selected-row').forEach(tr=>{tr.classList.remove('selected-row');const cb=tr.querySelector('.cb');if(cb)cb.classList.remove('checked')})}
+function updateSelBar(){const bar=document.getElementById('selBar');const cnt=selectedIds.size;bar.style.display=(selectMode&&cnt>0)?'flex':'none';document.getElementById('selBarCnt').textContent=cnt;document.getElementById('selBarLabel').textContent=cnt+' Aufträge markiert'}
 
 // ══════════════════════════════════════════════
-// SEND FUNCTIONS (Firebase)
+// SEND FUNCTIONS
 // ══════════════════════════════════════════════
-async function sendToMontage(entry, calType) {
-  if (!window._dbMontage) throw new Error('PE-Montage Firebase nicht verbunden');
-  const calId = `cal-${genId()}`;
+async function sendToMontage(entry,calType){
+  if(!window._dbMontage)throw new Error('PE-Montage nicht verbunden');
+  const calId=`cal-${genId()}`;
   await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/calentries').doc(calId).set({
-    id:calId, createdAt:new Date().toISOString(), isDone:false, isBilled:false,
-    entryType:'LIEFERUNG',
-    customer: entry.customer,           // Col E: Kunde
-    address:  entry.address,            // Col G+H+I: Strasse, PLZ Ort
-    memo:     entry.memo,               // Col C: ELE/Haus info
-    auftragsNr: entry.auftragsNrClean,  // Col D: Auftragsnr (clean)
-    target:   entry.target,             // Col J: ELE count
-    images:[], image:null,
-    deliveryDate: entry.date,
-    endDate:null, isMultiDay:false, calType:calType||'montage', isProv:false, customStartLabel:'',
+    id:calId,createdAt:new Date().toISOString(),isDone:false,isBilled:false,entryType:'LIEFERUNG',
+    customer:entry.customer,address:entry.address,memo:entry.memo,auftragsNr:entry.auftragsNrClean,target:entry.target,
+    images:[],image:null,deliveryDate:entry.date,endDate:null,isMultiDay:false,calType:calType||'montage',isProv:false,customStartLabel:'',
   });
-  const houseInfo = entry.memo || 'Gesamtmontage';
-  const objId = `obj-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+  const houseInfo=entry.memo||'Gesamtmontage';
+  const objId=`obj-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
   await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/objects').doc(objId).set({
-    id:objId,
-    name:    entry.address,
-    customer:entry.customer,
-    address: entry.address,
-    houseInfo,
-    auftragsNr: entry.auftragsNrClean,
-    target:  entry.target,
-    current:0, lastRemaining:null, blockReason:null,
-    deliveryDate: entry.date ? new Date(entry.date).toISOString() : new Date().toISOString(),
-    status:'active', history:[],
+    id:objId,name:entry.address,customer:entry.customer,address:entry.address,houseInfo,auftragsNr:entry.auftragsNrClean,
+    target:entry.target,current:0,lastRemaining:null,blockReason:null,
+    deliveryDate:entry.date?new Date(entry.date).toISOString():new Date().toISOString(),status:'active',history:[],
   });
   return calId;
 }
-
-async function sendToKalender(entry, teamId, calType) {
-  if (!window._dbKalender) throw new Error('PE-Kalender Firebase nicht verbunden');
-  const id = `cal-${genId()}`;
+async function sendToKalender(entry,teamId,calType){
+  if(!window._dbKalender)throw new Error('PE-Kalender nicht verbunden');
+  const id=`cal-${genId()}`;
   await window._dbKalender.collection(`teams_cal_${teamId}`).doc(id).set({
-    id, createdAt:new Date().toISOString(), isDone:false, isBilled:false,
-    entryType:'LIEFERUNG',
-    customer: entry.customer,           // Col E: Kunde
-    address:  entry.address,            // Col G+H+I: Strasse, PLZ Ort
-    memo:     entry.memo,               // Col C: ELE/Haus info
-    auftragsNr: entry.auftragsNrClean,  // Col D: Auftragsnr (clean)
-    target:   entry.target,             // Col J: ELE count
-    images:[], image:null,
-    deliveryDate: entry.date,
-    endDate:null, isMultiDay:false, calType:calType||'montage', isProv:false, customStartLabel:'',
+    id,createdAt:new Date().toISOString(),isDone:false,isBilled:false,entryType:'LIEFERUNG',
+    customer:entry.customer,address:entry.address,memo:entry.memo,auftragsNr:entry.auftragsNrClean,target:entry.target,
+    images:[],image:null,deliveryDate:entry.date,endDate:null,isMultiDay:false,calType:calType||'montage',isProv:false,customStartLabel:'',
   });
   return id;
 }
@@ -874,412 +1484,138 @@ async function sendToKalender(entry, teamId, calType) {
 // ══════════════════════════════════════════════
 // PER-ROW SEND DROPDOWN
 // ══════════════════════════════════════════════
-let openDropdownId = null;
-let openDropdownCleanup = null;
-
-function closeDrop() {
-  const el = document.getElementById('activeDropdown');
-  if (el) el.remove();
-  if (openDropdownCleanup) { openDropdownCleanup(); openDropdownCleanup = null; }
-  openDropdownId = null;
+let openDropdownId=null,openDropdownCleanup=null;
+function closeDrop(){const el=document.getElementById('activeDropdown');if(el)el.remove();if(openDropdownCleanup){openDropdownCleanup();openDropdownCleanup=null}openDropdownId=null}
+function openSendDrop(entryId,btnEl){
+  if(openDropdownId===entryId){closeDrop();return}
+  closeDrop();openDropdownId=entryId;
+  const rect=btnEl.getBoundingClientRect();
+  const drop=document.createElement('div');drop.id='activeDropdown';drop.className='grp-dropdown';
+  const spaceBelow=window.innerHeight-rect.bottom;const openUp=spaceBelow<350;
+  drop.style.top=openUp?'auto':(rect.bottom+4)+'px';
+  drop.style.bottom=openUp?(window.innerHeight-rect.top+4)+'px':'auto';
+  drop.style.left=Math.min(rect.right-260,window.innerWidth-270)+'px';
+  let html=`<div class="grp-drop-section">🔵 PE-MONTAGE</div>`;
+  CAL_TYPES.forEach(ct=>{html+=`<div class="grp-drop-item" onclick="doSendRow('${entryId}','montage',null,'${ct.key}')" style="border-left:3px solid ${ct.color}"><div class="grp-drop-dot" style="background:${ct.color}"></div><span style="flex:1"><b>URIM</b> <span style="color:#475569;font-size:9px">PE-Montage</span></span><span class="ct-badge" style="background:${ct.bg};color:${ct.color};border:1px solid ${ct.border}">${ct.icon} ${ct.label}</span></div>`});
+  html+=`<div class="grp-divider"></div><div class="grp-drop-section">🟣 PE-KALENDER GRUPPEN</div>`;
+  if(!kalenderTeams.length){html+=`<div style="padding:8px 10px;color:#475569;font-size:10px">Keine Gruppen</div>`}
+  else{kalenderTeams.forEach(team=>{parseCalTypes(team.calType).forEach(ct=>{const ctCfg=CAL_TYPES.find(x=>x.key===ct)||CAL_TYPES[0];html+=`<div class="grp-drop-item" onclick="doSendRow('${entryId}','kalender','${team.id}','${ct}')" style="border-left:3px solid ${team.color||ctCfg.color}"><div class="grp-drop-dot" style="background:${team.color||ctCfg.color}"></div><span style="flex:1;font-weight:900">${team.name}</span><span class="ct-badge" style="background:${ctCfg.bg};color:${ctCfg.color};border:1px solid ${ctCfg.border}">${ctCfg.icon} ${ctCfg.label}</span></div>`})})}
+  drop.innerHTML=html;document.body.appendChild(drop);
+  const onClickOutside=e=>{if(!drop.contains(e.target)&&e.target!==btnEl)closeDrop()};
+  const onScroll=()=>closeDrop();
+  setTimeout(()=>document.addEventListener('mousedown',onClickOutside),0);
+  window.addEventListener('scroll',onScroll,true);
+  openDropdownCleanup=()=>{document.removeEventListener('mousedown',onClickOutside);window.removeEventListener('scroll',onScroll,true)};
 }
-
-function openSendDrop(entryId, btnEl) {
-  if (openDropdownId === entryId) { closeDrop(); return; }
-  closeDrop();
-  openDropdownId = entryId;
-
-  const rect = btnEl.getBoundingClientRect();
-  const drop = document.createElement('div');
-  drop.id = 'activeDropdown';
-  drop.className = 'grp-dropdown';
-
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const openUp = spaceBelow < 350;
-  drop.style.top    = openUp ? 'auto' : (rect.bottom + 4) + 'px';
-  drop.style.bottom = openUp ? (window.innerHeight - rect.top + 4) + 'px' : 'auto';
-  drop.style.left   = Math.min(rect.right - 260, window.innerWidth - 270) + 'px';
-
-  let html = `<div class="grp-drop-section">🔵 PE-MONTAGE — Kalender + Objekt-Liste</div>`;
-  CAL_TYPES.forEach(ct => {
-    html += `<div class="grp-drop-item" onclick="doSendRow('${entryId}','montage',null,'${ct.key}')" style="border-left:3px solid ${ct.color}">
-      <div class="grp-drop-dot" style="background:${ct.color}"></div>
-      <span style="flex:1"><b>URIM</b> <span style="color:#475569;font-size:9px">PE-Montage</span></span>
-      <span class="ct-badge" style="background:${ct.bg};color:${ct.color};border:1px solid ${ct.border}">${ct.icon} ${ct.label}</span>
-    </div>`;
-  });
-  html += `<div class="grp-divider"></div><div class="grp-drop-section">🟣 PE-KALENDER GRUPPEN</div>`;
-  if (kalenderTeams.length === 0) {
-    html += `<div style="padding:8px 10px;color:#475569;font-size:10px">Keine Gruppen verfügbar</div>`;
-  } else {
-    kalenderTeams.forEach(team => {
-      parseCalTypes(team.calType).forEach(ct => {
-        const ctCfg = CAL_TYPES.find(x=>x.key===ct) || CAL_TYPES[0];
-        html += `<div class="grp-drop-item" onclick="doSendRow('${entryId}','kalender','${team.id}','${ct}')" style="border-left:3px solid ${team.color||ctCfg.color}">
-          <div class="grp-drop-dot" style="background:${team.color||ctCfg.color}"></div>
-          <span style="flex:1;font-weight:900">${team.name}</span>
-          <span class="ct-badge" style="background:${ctCfg.bg};color:${ctCfg.color};border:1px solid ${ctCfg.border}">${ctCfg.icon} ${ctCfg.label}</span>
-        </div>`;
-      });
-    });
-  }
-  drop.innerHTML = html;
-  document.body.appendChild(drop);
-
-  const onClickOutside = (e) => { if (!drop.contains(e.target) && e.target !== btnEl) closeDrop(); };
-  const onScroll = () => closeDrop();
-  setTimeout(() => document.addEventListener('mousedown', onClickOutside), 0);
-  window.addEventListener('scroll', onScroll, true);
-  openDropdownCleanup = () => { document.removeEventListener('mousedown', onClickOutside); window.removeEventListener('scroll', onScroll, true); };
-}
-
-async function doSendRow(entryId, app, teamId, calType) {
-  closeDrop();
-  const entry = state.find(d => d._id === entryId);
-  if (!entry) return;
-
-  const btn = document.querySelector(`[data-send-id="${entryId}"]`);
-  if (btn) { btn.className = 'send-btn sending'; btn.textContent = '⏳ Sende…'; btn.disabled = true; }
-
-  try {
-    if (app === 'montage') {
-      await sendToMontage(entry, calType);
-      const ct = CAL_TYPES.find(x=>x.key===calType);
-      entry.sentTo.push({label:`URIM / ${ct?.label||calType}`, color:ct?.color||'#10b981'});
-      showToast('success', `✅ → PE-Montage URIM / ${ct?.label||calType}`);
-    } else {
-      const team = kalenderTeams.find(t=>t.id===teamId);
-      await sendToKalender(entry, teamId, calType);
-      const ct = CAL_TYPES.find(x=>x.key===calType);
-      entry.sentTo.push({label:`${team?.name||teamId} / ${ct?.label||calType}`, color:team?.color||ct?.color||'#10b981'});
-      showToast('success', `✅ → ${team?.name||teamId} / ${ct?.label||calType}`);
-    }
-    updateKPIs();
-    render();
-  } catch(err) {
-    showToast('error', `❌ ${err.message}`);
-    if (btn) { btn.className = 'send-btn idle'; btn.textContent = '📤 Senden'; btn.disabled = false; }
-  }
+async function doSendRow(entryId,app,teamId,calType){
+  closeDrop();const entry=state.find(d=>d._id===entryId);if(!entry)return;
+  const btn=document.querySelector(`[data-send-id="${entryId}"]`);
+  if(btn){btn.className='send-btn sending';btn.textContent='⏳ Sende…';btn.disabled=true}
+  try{
+    if(app==='montage'){await sendToMontage(entry,calType);const ct=CAL_TYPES.find(x=>x.key===calType);entry.sentTo.push({label:`URIM / ${ct?.label||calType}`,color:ct?.color||'#10b981'});showToast('success',`✅ → PE-Montage URIM / ${ct?.label||calType}`)}
+    else{const team=kalenderTeams.find(t=>t.id===teamId);await sendToKalender(entry,teamId,calType);const ct=CAL_TYPES.find(x=>x.key===calType);entry.sentTo.push({label:`${team?.name||teamId} / ${ct?.label||calType}`,color:team?.color||ct?.color||'#10b981'});showToast('success',`✅ → ${team?.name||teamId} / ${ct?.label||calType}`)}
+    updateKPIs();render();
+  }catch(err){showToast('error',`❌ ${err.message}`);if(btn){btn.className='send-btn idle';btn.textContent='📤 Senden';btn.disabled=false}}
 }
 
 // ══════════════════════════════════════════════
 // MULTI SEND MODAL
 // ══════════════════════════════════════════════
-let modalApp = 'montage';
-let modalTeam = null;
-let modalCalType = 'montage';
-
-function openSendAll() {
-  modalEntries = [...state];
-  showModal();
+let modalApp='montage',modalTeam=null,modalCalType='montage';
+function openSendAll(){modalEntries=[...state];showModal()}
+function openMultiSend(){modalEntries=state.filter(d=>selectedIds.has(d._id));if(!modalEntries.length)return;showModal()}
+function closeModal(){document.getElementById('multiSendModal').style.display='none';modalEntries=[]}
+function showModal(){modalApp='montage';modalTeam=null;modalCalType='montage';document.getElementById('modalTitle').textContent=`${modalEntries.length} Aufträge → Kalender`;document.getElementById('multiSendModal').style.display='flex';renderModalBody(false,0,false)}
+function renderModalBody(sending,progress,done,sentCount){
+  const body=document.getElementById('modalBody');
+  if(done){body.innerHTML=`<div class="modal-done-state"><div style="font-size:48px;margin-bottom:10px">✅</div><div style="color:var(--montage);font-size:22px;font-weight:900;font-family:var(--cond);text-transform:uppercase">${sentCount} Aufträge gesendet!</div><div style="color:var(--text3);font-size:11px;margin-top:6px">→ ${modalApp==='montage'?'PE-Montage URIM':modalTeam?.name} / ${CAL_TYPES.find(x=>x.key===modalCalType)?.label}</div></div><button class="modal-cancel" style="background:var(--montage);color:#0f0f0f;border-color:var(--montage)" onclick="closeModal()">✓ FERTIG</button>`;return}
+  const previewItems=modalEntries.slice(0,8).map((e,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:var(--blue);font-size:9px;font-family:var(--mono);min-width:18px">${i+1}.</span><span style="color:var(--text);font-size:11px;font-weight:600;text-transform:uppercase;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.kunde}</span><span style="color:var(--text3);font-size:9px;font-family:var(--mono)">${e.datum}</span></div>`).join('');
+  const extra=modalEntries.length>8?`<div style="color:var(--text3);font-size:10px;padding:4px 0">+ ${modalEntries.length-8} weitere…</div>`:'';
+  const appBtns=[{key:'montage',icon:'🔵',label:'PE-Montage',sub:'URIM · Kalender+Objekte',color:'#3b82f6',bg:'rgba(59,130,246,.15)',border:'rgba(59,130,246,.4)'},{key:'kalender',icon:'🟣',label:'PE-Kalender',sub:'Gruppe wählen ↓',color:'#8b5cf6',bg:'rgba(139,92,246,.15)',border:'rgba(139,92,246,.4)'}].map(opt=>`<button class="app-btn" onclick="modalSetApp('${opt.key}')" style="background:${modalApp===opt.key?opt.bg:'rgba(255,255,255,.03)'};border-color:${modalApp===opt.key?opt.color:'#1e293b'};color:${modalApp===opt.key?opt.color:'#475569'}"><div class="app-btn-icon">${opt.icon}</div><div>${opt.label}</div><div class="app-btn-sub">${opt.sub}</div></button>`).join('');
+  const teamsList=modalApp==='kalender'?`<div><div class="modal-section-label">2. Gruppe wählen</div><div class="teams-list">${kalenderTeams.map(t=>`<div class="team-opt" onclick="modalSetTeam('${t.id}')" style="background:${modalTeam?.id===t.id?'rgba(139,92,246,.1)':'rgba(255,255,255,.03)'};border-color:${modalTeam?.id===t.id?'#8b5cf6':'#1e293b'}"><div class="team-opt-dot" style="background:${t.color||'#3b82f6'}"></div><span class="team-opt-name">${t.name}</span>${modalTeam?.id===t.id?'<span style="color:#8b5cf6;font-weight:900">✓</span>':''}</div>`).join('')}</div></div>`:'';
+  const ctBtns=CAL_TYPES.map(ct=>`<button class="ct-btn" onclick="modalSetCalType('${ct.key}')" style="background:${modalCalType===ct.key?ct.bg:'rgba(255,255,255,.03)'};border-color:${modalCalType===ct.key?ct.color:'#1e293b'};color:${modalCalType===ct.key?ct.color:'#475569'}"><div style="font-size:16px;margin-bottom:2px">${ct.icon}</div><div>${ct.label}</div></button>`).join('');
+  const canSend=modalApp==='montage'||!!modalTeam;
+  const progHtml=sending?`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--text2);font-size:10px">Sende… ${sentCount||0}/${modalEntries.length}</span><span style="color:var(--blue);font-size:10px;font-weight:700">${progress}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div></div>`:'';
+  body.innerHTML=`<div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:9px;padding:10px 12px;max-height:110px;overflow-y:auto"><div style="color:var(--text3);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:5px">${modalEntries.length} Aufträge</div>${previewItems}${extra}</div><div><div class="modal-section-label">1. Ziel-App wählen</div><div class="app-grid">${appBtns}</div></div>${teamsList}<div><div class="modal-section-label">${modalApp==='kalender'?'3.':'2.'} Kalender-Typ</div><div class="ct-grid">${ctBtns}</div></div>${progHtml}<div class="modal-actions"><button class="modal-cancel" onclick="closeModal()">Abbrechen</button><button class="modal-send ${canSend&&!sending?'ready':'disabled'}" onclick="${canSend&&!sending?'runModalSend()':''}">📤 ${sending?`${progress}% …`:`${modalEntries.length} AUFTRÄGE SENDEN`}</button></div>`;
 }
-function openMultiSend() {
-  modalEntries = state.filter(d => selectedIds.has(d._id));
-  if (!modalEntries.length) return;
-  showModal();
-}
-function closeModal() {
-  document.getElementById('multiSendModal').style.display = 'none';
-  modalEntries = [];
-}
-
-function showModal() {
-  modalApp = 'montage'; modalTeam = null; modalCalType = 'montage';
-  document.getElementById('modalTitle').textContent = `${modalEntries.length} Aufträge → Kalender`;
-  document.getElementById('multiSendModal').style.display = 'flex';
-  renderModalBody(false, 0, false);
-}
-
-function renderModalBody(sending, progress, done, sentCount) {
-  const body = document.getElementById('modalBody');
-  if (done) {
-    body.innerHTML = `
-      <div class="modal-done-state">
-        <div style="font-size:48px;margin-bottom:10px">✅</div>
-        <div style="color:var(--montage);font-size:22px;font-weight:900;font-family:var(--cond);text-transform:uppercase">${sentCount} Aufträge gesendet!</div>
-        <div style="color:var(--text3);font-size:11px;margin-top:6px">
-          → ${modalApp==='montage'?'PE-Montage URIM':modalTeam?.name} / ${CAL_TYPES.find(x=>x.key===modalCalType)?.label}
-        </div>
-      </div>
-      <button class="modal-cancel" style="background:var(--montage);color:#0f0f0f;border-color:var(--montage)" onclick="closeModal()">✓ FERTIG</button>
-    `;
-    return;
+function modalSetApp(app){modalApp=app;if(app==='montage')modalTeam=null;renderModalBody(false,0,false)}
+function modalSetTeam(id){modalTeam=kalenderTeams.find(t=>t.id===id)||null;renderModalBody(false,0,false)}
+function modalSetCalType(ct){modalCalType=ct;renderModalBody(false,0,false)}
+async function runModalSend(){
+  let sent=0;
+  for(let i=0;i<modalEntries.length;i++){
+    const entry=modalEntries[i];renderModalBody(true,Math.round((i/modalEntries.length)*100),false,sent);
+    try{
+      if(modalApp==='montage')await sendToMontage(entry,modalCalType);
+      else await sendToKalender(entry,modalTeam.id,modalCalType);
+      const ct=CAL_TYPES.find(x=>x.key===modalCalType);
+      const label=modalApp==='montage'?`URIM / ${ct?.label||modalCalType}`:`${modalTeam?.name} / ${ct?.label||modalCalType}`;
+      const color=modalApp==='montage'?ct?.color||'#10b981':modalTeam?.color||ct?.color||'#10b981';
+      const si=state.findIndex(d=>d._id===entry._id);if(si>=0)state[si].sentTo.push({label,color});sent++;
+    }catch(err){console.error(err)}
   }
-
-  const previewItems = modalEntries.slice(0,8).map((e,i)=>`
-    <div style="display:flex;gap:8px;align-items:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)">
-      <span style="color:var(--blue);font-size:9px;font-family:var(--mono);min-width:18px">${i+1}.</span>
-      <span style="color:var(--text);font-size:11px;font-weight:600;text-transform:uppercase;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.kunde}</span>
-      <span style="color:var(--text3);font-size:9px;font-family:var(--mono)">${e.datum}</span>
-    </div>
-  `).join('');
-  const extra = modalEntries.length > 8 ? `<div style="color:var(--text3);font-size:10px;padding:4px 0">+ ${modalEntries.length-8} weitere…</div>` : '';
-
-  const appBtns = [
-    {key:'montage', icon:'🔵', label:'PE-Montage', sub:'URIM · Kalender+Objekte', color:'#3b82f6', bg:'rgba(59,130,246,.15)', border:'rgba(59,130,246,.4)'},
-    {key:'kalender', icon:'🟣', label:'PE-Kalender', sub:'Gruppe wählen ↓', color:'#8b5cf6', bg:'rgba(139,92,246,.15)', border:'rgba(139,92,246,.4)'},
-  ].map(opt => `
-    <button class="app-btn" onclick="modalSetApp('${opt.key}')"
-      style="background:${modalApp===opt.key?opt.bg:'rgba(255,255,255,.03)'};border-color:${modalApp===opt.key?opt.color:'#1e293b'};color:${modalApp===opt.key?opt.color:'#475569'}">
-      <div class="app-btn-icon">${opt.icon}</div>
-      <div>${opt.label}</div>
-      <div class="app-btn-sub">${opt.sub}</div>
-    </button>
-  `).join('');
-
-  const teamsList = modalApp==='kalender' ? `
-    <div>
-      <div class="modal-section-label">2. Gruppe wählen</div>
-      <div class="teams-list">
-        ${kalenderTeams.map(t=>`
-          <div class="team-opt" onclick="modalSetTeam('${t.id}')"
-            style="background:${modalTeam?.id===t.id?'rgba(139,92,246,.1)':'rgba(255,255,255,.03)'};border-color:${modalTeam?.id===t.id?'#8b5cf6':'#1e293b'}">
-            <div class="team-opt-dot" style="background:${t.color||'#3b82f6'}"></div>
-            <span class="team-opt-name">${t.name}</span>
-            ${modalTeam?.id===t.id?'<span style="color:#8b5cf6;font-weight:900">✓</span>':''}
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  ` : '';
-
-  const ctBtns = CAL_TYPES.map(ct=>`
-    <button class="ct-btn" onclick="modalSetCalType('${ct.key}')"
-      style="background:${modalCalType===ct.key?ct.bg:'rgba(255,255,255,.03)'};border-color:${modalCalType===ct.key?ct.color:'#1e293b'};color:${modalCalType===ct.key?ct.color:'#475569'}">
-      <div style="font-size:16px;margin-bottom:2px">${ct.icon}</div>
-      <div>${ct.label}</div>
-    </button>
-  `).join('');
-
-  const canSend = modalApp==='montage' || !!modalTeam;
-  const progHtml = sending ? `
-    <div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <span style="color:var(--text2);font-size:10px">Sende… ${sentCount||0}/${modalEntries.length}</span>
-        <span style="color:var(--blue);font-size:10px;font-weight:700">${progress}%</span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
-    </div>
-  ` : '';
-
-  body.innerHTML = `
-    <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:9px;padding:10px 12px;max-height:110px;overflow-y:auto">
-      <div style="color:var(--text3);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:5px">${modalEntries.length} Aufträge</div>
-      ${previewItems}${extra}
-    </div>
-    <div>
-      <div class="modal-section-label">1. Ziel-App wählen</div>
-      <div class="app-grid">${appBtns}</div>
-    </div>
-    ${teamsList}
-    <div>
-      <div class="modal-section-label">${modalApp==='kalender'?'3.':'2.'} Kalender-Typ</div>
-      <div class="ct-grid">${ctBtns}</div>
-    </div>
-    ${progHtml}
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeModal()">Abbrechen</button>
-      <button class="modal-send ${canSend&&!sending?'ready':'disabled'}" onclick="${canSend&&!sending?'runModalSend()':''}">
-        ${sending?`⏳ ${progress}% …`:`📤 ${modalEntries.length} AUFTRÄGE SENDEN`}
-      </button>
-    </div>
-  `;
-}
-
-function modalSetApp(app) { modalApp = app; if(app==='montage') modalTeam=null; renderModalBody(false,0,false); }
-function modalSetTeam(id) { modalTeam = kalenderTeams.find(t=>t.id===id)||null; renderModalBody(false,0,false); }
-function modalSetCalType(ct) { modalCalType = ct; renderModalBody(false,0,false); }
-
-async function runModalSend() {
-  let sent = 0;
-  for (let i = 0; i < modalEntries.length; i++) {
-    const entry = modalEntries[i];
-    renderModalBody(true, Math.round((i/modalEntries.length)*100), false, sent);
-    try {
-      if (modalApp === 'montage') await sendToMontage(entry, modalCalType);
-      else await sendToKalender(entry, modalTeam.id, modalCalType);
-      const ct = CAL_TYPES.find(x=>x.key===modalCalType);
-      const label = modalApp==='montage' ? `URIM / ${ct?.label||modalCalType}` : `${modalTeam?.name} / ${ct?.label||modalCalType}`;
-      const color = modalApp==='montage' ? ct?.color||'#10b981' : modalTeam?.color||ct?.color||'#10b981';
-      const si = state.findIndex(d=>d._id===entry._id);
-      if (si>=0) state[si].sentTo.push({label, color});
-      sent++;
-    } catch(err) { console.error(err); }
-  }
-  renderModalBody(false, 100, true, sent);
-  const dest = modalApp==='montage' ? 'PE-Montage URIM' : modalTeam?.name;
-  const ct = CAL_TYPES.find(x=>x.key===modalCalType);
-  showToast('success', `✅ ${sent}/${modalEntries.length} → ${dest} / ${ct?.label||modalCalType}`);
+  renderModalBody(false,100,true,sent);
+  const dest=modalApp==='montage'?'PE-Montage URIM':modalTeam?.name;
+  const ct=CAL_TYPES.find(x=>x.key===modalCalType);
+  showToast('success',`✅ ${sent}/${modalEntries.length} → ${dest} / ${ct?.label||modalCalType}`);
   updateKPIs();
-  if (selectMode) {
-    selectedIds = new Set();
-    selectMode = false;
-    const btn = document.getElementById('selModeBtn');
-    btn.classList.remove('active');
-    btn.textContent = '☑ Auswählen';
-    document.getElementById('selBar').style.display = 'none';
-  }
+  if(selectMode){selectedIds=new Set();selectMode=false;const btn=document.getElementById('selModeBtn');btn.classList.remove('active');btn.textContent='☑ Auswählen';document.getElementById('selBar').style.display='none'}
   render();
 }
 
 // ══════════════════════════════════════════════
 // TOAST
 // ══════════════════════════════════════════════
-function showToast(type, msg) {
-  const wrap = document.getElementById('toastWrap');
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.innerHTML = `<span style="font-size:18px">${type==='success'?'✅':'❌'}</span><div style="color:#fff;font-size:12px;font-weight:600">${msg}</div>`;
-  wrap.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
-}
+function showToast(type,msg){const wrap=document.getElementById('toastWrap');const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span style="font-size:18px">${type==='success'?'✅':'❌'}</span><div style="color:#fff;font-size:12px;font-weight:600">${msg}</div>`;wrap.appendChild(t);setTimeout(()=>t.remove(),3500)}
 
 // ══════════════════════════════════════════════
-// RENDER
+// RENDER (Dispo)
 // ══════════════════════════════════════════════
-function render() {
-  if (!state.length) return;
-  renderSidebar();
-  if (currentView === 'list') renderList();
-  else renderDayView();
-}
-
-function renderSidebar() {
-  const maxDay = Math.max(1, ...Object.keys(DAYS).map(d => state.filter(x=>x.datum===d).length));
-  document.getElementById('dayPills').innerHTML = Object.entries(DAYS).map(([date,label]) => {
-    const tot  = state.filter(d=>d.datum===date).length;
-    const mont = state.filter(d=>d.datum===date&&d.has_montage).length;
-    const pct  = Math.round(tot/maxDay*100);
-    return `<div class="day-pill${activeDay===date?' active':''}" data-day="${date}" onclick="setDayFilter('${date}')">
-      <div style="flex:1">
-        <div class="day-pill-name">${label}</div>
-        <div style="height:2px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:var(--accent2);border-radius:2px"></div>
-        </div>
-      </div>
-      <div class="day-pill-meta" style="margin-left:8px">${tot}<span style="color:var(--montage)"> ·${mont}M</span></div>
-    </div>`;
+function render(){if(!state.length)return;renderSidebar();if(currentView==='list')renderList();else renderDayView()}
+function renderSidebar(){
+  const maxDay=Math.max(1,...Object.keys(DAYS).map(d=>state.filter(x=>x.datum===d).length));
+  document.getElementById('dayPills').innerHTML=Object.entries(DAYS).map(([date,label])=>{
+    const tot=state.filter(d=>d.datum===date).length;
+    const mont=state.filter(d=>d.datum===date&&d.has_montage).length;
+    const pct=Math.round(tot/maxDay*100);
+    return `<div class="day-pill${activeDay===date?' active':''}" data-day="${date}" onclick="setDayFilter('${date}')"><div style="flex:1"><div class="day-pill-name">${label}</div><div style="height:2px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent2);border-radius:2px"></div></div></div><div class="day-pill-meta" style="margin-left:8px">${tot}<span style="color:var(--montage)"> ·${mont}M</span></div></div>`;
   }).join('');
 }
-
-function renderList() {
-  const rows = getFiltered();
-  document.getElementById('resultCount').textContent = rows.length + ' Aufträge';
-  
-  // Group by day for separator rendering
-  let html = '';
-  let lastDatum = null;
-
-  rows.forEach((d, i) => {
-    // Day separator
-    if (d.datum !== lastDatum) {
-      const dayRows = rows.filter(r => r.datum === d.datum);
-      const montCount = dayRows.filter(r => r.has_montage).length;
-      const colSpan = selectMode ? 9 : 8;
-      const fullLabel = formatDayLabel(d.datum);
-      html += `<tr class="day-sep-row">
-        <td colspan="${colSpan}">
-          <div class="day-sep-inner">
-            <div class="day-sep-label">${fullLabel}</div>
-            <span class="day-sep-count">${dayRows.length} Auftr.</span>
-            ${montCount > 0 ? `<span class="day-sep-montage">· ${montCount}× Montage</span>` : ''}
-            <div class="day-sep-line-right"></div>
-          </div>
-        </td>
-      </tr>`;
-      lastDatum = d.datum;
+function renderList(){
+  const rows=getFiltered();document.getElementById('resultCount').textContent=rows.length+' Aufträge';
+  let html='',lastDatum=null;
+  rows.forEach((d,i)=>{
+    if(d.datum!==lastDatum){
+      const dayRows=rows.filter(r=>r.datum===d.datum);const montCount=dayRows.filter(r=>r.has_montage).length;
+      const colSpan=selectMode?9:8;const fullLabel=formatDayLabel(d.datum);
+      html+=`<tr class="day-sep-row"><td colspan="${colSpan}"><div class="day-sep-inner"><div class="day-sep-label">${fullLabel}</div><span class="day-sep-count">${dayRows.length} Auftr.</span>${montCount>0?`<span class="day-sep-montage">· ${montCount}× Montage</span>`:''}<div class="day-sep-line-right"></div></div></td></tr>`;
+      lastDatum=d.datum;
     }
-
-    const isSelected = selectedIds.has(d._id);
-    const sentBadges = d.sentTo && d.sentTo.length > 0
-      ? d.sentTo.map(s=>`<span class="badge badge-sent">✓ ${s.label}</span>`).join('')
-      : '';
-
-    const cbCell = selectMode ? `<td class="cb-cell"><div class="cb${isSelected?' checked':''}">✓</div></td>` : '';
-
-    const sendCell = selectMode ? `<td></td>` : `<td>
-      <div style="display:flex;flex-direction:column;gap:3px">
-        <button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}"
-          data-send-id="${d._id}"
-          onclick="event.stopPropagation();openSendDrop('${d._id}',this)"
-        >${d.sentTo&&d.sentTo.length>0?`✓ Gesendet (${d.sentTo.length}) ▼`:'📤 Senden ▼'}</button>
-        ${sentBadges}
-      </div>
-    </td>`;
-
-    html += `<tr class="${d.has_montage?'has-montage':'no-montage'}${isSelected?' selected-row':''}"
-      data-row-id="${d._id}"
-      style="animation-delay:${Math.min(i,20)*0.01}s;cursor:${selectMode?'pointer':'default'}"
-      ${selectMode?`onclick="toggleSelect('${d._id}')"`:''}>
-      ${cbCell}
-      <td class="td-auftrag">${d.auftrag||'—'}</td>
-      <td>
-        <div class="td-kunde-name">${d.kunde}</div>
-        <div class="td-kunde-sub" title="${d.projekt}">${d.projekt}</div>
-      </td>
-      <td class="td-ort">
-        <div style="font-size:12px">${d.strasse||''}</div>
-        <div style="font-size:11px;color:var(--text3)">${d.plz} ${d.ort}</div>
-      </td>
-      <td class="td-ele" style="text-align:right">${d.eleNum>0?d.eleNum+'&nbsp;ELE':'—'}</td>
-      <td>
-        ${d.has_montage?'<span class="badge badge-montage">Montage</span>':''}
-        ${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}
-      </td>
-      <td><span class="memo-text" title="${d.memo}">${d.memo||'—'}</span></td>
-      ${sendCell}
-    </tr>`;
+    const isSelected=selectedIds.has(d._id);
+    const sentBadges=d.sentTo&&d.sentTo.length>0?d.sentTo.map(s=>`<span class="badge badge-sent">✓ ${s.label}</span>`).join(''):'';
+    const cbCell=selectMode?`<td class="cb-cell"><div class="cb${isSelected?' checked':''}">✓</div></td>`:'';
+    const sendCell=selectMode?`<td></td>`:`<td><div style="display:flex;flex-direction:column;gap:3px"><button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}" data-send-id="${d._id}" onclick="event.stopPropagation();openSendDrop('${d._id}',this)">${d.sentTo&&d.sentTo.length>0?`✓ Gesendet (${d.sentTo.length}) ▼`:'📤 Senden ▼'}</button>${sentBadges}</div></td>`;
+    html+=`<tr class="${d.has_montage?'has-montage':'no-montage'}${isSelected?' selected-row':''}" data-row-id="${d._id}" style="animation-delay:${Math.min(i,20)*0.01}s;cursor:${selectMode?'pointer':'default'}" ${selectMode?`onclick="toggleSelect('${d._id}')"`:''}>${cbCell}<td class="td-auftrag">${d.auftrag||'—'}</td><td><div class="td-kunde-name">${d.kunde}</div><div class="td-kunde-sub" title="${d.projekt}">${d.projekt}</div></td><td class="td-ort"><div style="font-size:12px">${d.strasse||''}</div><div style="font-size:11px;color:var(--text3)">${d.plz} ${d.ort}</div></td><td class="td-ele" style="text-align:right">${d.eleNum>0?d.eleNum+'&nbsp;ELE':'—'}</td><td>${d.has_montage?'<span class="badge badge-montage">Montage</span>':''}${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}</td><td><span class="memo-text" title="${d.memo}">${d.memo||'—'}</span></td>${sendCell}</tr>`;
   });
-  document.getElementById('tableBody').innerHTML = html;
-  document.getElementById('th-cb').style.display = selectMode ? 'table-cell' : 'none';
+  document.getElementById('tableBody').innerHTML=html;
+  document.getElementById('th-cb').style.display=selectMode?'table-cell':'none';
 }
-
-function renderDayView() {
-  document.getElementById('dayColGrid').innerHTML = Object.entries(DAYS).map(([date, label]) => {
-    const items = getFiltered().filter(d => d.datum === date);
-    const mont  = items.filter(d => d.has_montage).length;
-    const cards = items.map(d => `
-      <div class="day-card${d.has_montage?' montage':''}">
-        <div class="day-card-kunde">${d.kunde}</div>
-        <div class="day-card-ort">${d.plz} ${d.ort}</div>
-        <div class="day-card-badges">
-          ${d.has_montage?'<span class="badge badge-montage">M</span>':''}
-          ${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}
-          ${d.sentTo&&d.sentTo.length>0?'<span class="badge badge-sent">✓</span>':''}
-          <div class="day-card-send">
-            <button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}" style="font-size:9px;padding:3px 8px"
-              data-send-id="${d._id}"
-              onclick="event.stopPropagation();openSendDrop('${d._id}',this)">
-              ${d.sentTo&&d.sentTo.length>0?'✓':'📤'}
-            </button>
-          </div>
-        </div>
-      </div>
-    `).join('');
-    return `<div>
-      <div class="day-col-header">
-        <div class="day-col-title">${label}</div>
-        <div class="day-col-meta">${items.length} Auftr. · <span style="color:var(--montage)">${mont}× M</span></div>
-      </div>
-      <div class="day-col-body">${cards||'<div style="padding:12px;font-size:11px;color:var(--text3)">Keine Einträge</div>'}</div>
-    </div>`;
+function renderDayView(){
+  document.getElementById('dayColGrid').innerHTML=Object.entries(DAYS).map(([date,label])=>{
+    const items=getFiltered().filter(d=>d.datum===date);const mont=items.filter(d=>d.has_montage).length;
+    const cards=items.map(d=>`<div class="day-card${d.has_montage?' montage':''}"><div class="day-card-kunde">${d.kunde}</div><div class="day-card-ort">${d.plz} ${d.ort}</div><div class="day-card-badges">${d.has_montage?'<span class="badge badge-montage">M</span>':''}${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}${d.sentTo&&d.sentTo.length>0?'<span class="badge badge-sent">✓</span>':''}<div class="day-card-send"><button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}" style="font-size:9px;padding:3px 8px" data-send-id="${d._id}" onclick="event.stopPropagation();openSendDrop('${d._id}',this)">${d.sentTo&&d.sentTo.length>0?'✓':'📤'}</button></div></div></div>`).join('');
+    return `<div><div class="day-col-header"><div class="day-col-title">${label}</div><div class="day-col-meta">${items.length} Auftr. · <span style="color:var(--montage)">${mont}× M</span></div></div><div class="day-col-body">${cards||'<div style="padding:12px;font-size:11px;color:var(--text3)">Keine Einträge</div>'}</div></div>`;
   }).join('');
 }
 
 // ══════════════════════════════════════════════
 // EXPORT CSV
 // ══════════════════════════════════════════════
-function exportCSV() {
-  const rows = getFiltered();
-  const hdr  = ['Datum','Auftrag','Kunde','Strasse','PLZ','Ort','ELE','Montage','Termin','Memo','Gesendet'];
-  const lines = [hdr.join(';'), ...rows.map(d => [
-    DAYS[d.datum]||d.datum, d.auftrag, `"${d.kunde}"`, d.strasse, d.plz, d.ort,
-    d.eleNum||'', d.has_montage?'Ja':'Nein', d.termin_fix?'FIX':'Prov.',
-    `"${d.memo||''}"`, d.sentTo&&d.sentTo.length?d.sentTo.map(s=>s.label).join(', '):''
-  ].join(';'))];
-  const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'Tourendispo_Export.csv'; a.click();
+function exportCSV(){
+  const rows=getFiltered();const hdr=['Datum','Auftrag','Kunde','Strasse','PLZ','Ort','ELE','Montage','Termin','Memo','Gesendet'];
+  const lines=[hdr.join(';'),...rows.map(d=>[DAYS[d.datum]||d.datum,d.auftrag,`"${d.kunde}"`,d.strasse,d.plz,d.ort,d.eleNum||'',d.has_montage?'Ja':'Nein',d.termin_fix?'FIX':'Prov.',`"${d.memo||''}"`,d.sentTo&&d.sentTo.length?d.sentTo.map(s=>s.label).join(', '):''].join(';'))];
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Tourendispo_Export.csv';a.click();
 }
 </script>
 </body>

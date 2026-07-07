@@ -592,6 +592,49 @@ tbody tr{animation:fadeIn .12s ease both}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ══════════════════════════════════════════════
+   WOCHENKALENDER — Gesamtübersicht aller Gruppen
+   (Zeilen = Gruppen, Spalten = Mo–Sa, wie Excel-Plan)
+══════════════════════════════════════════════ */
+.wk-page{flex:1;overflow-y:auto;display:flex;flex-direction:column;height:calc(100vh - 57px)}
+.wk-topbar{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:50;flex-wrap:wrap}
+.wk-nav-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--accent);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wk-nav-btn:hover{border-color:var(--accent2)}
+.wk-today-btn{padding:6px 14px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:11px;font-family:var(--mono);cursor:pointer;flex-shrink:0}
+.wk-kw-label{font-family:var(--cond);font-size:16px;font-weight:900;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.wk-range-label{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
+.wk-search-wrap{position:relative;flex:1;min-width:220px;max-width:380px;margin-left:auto}
+.wk-search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);width:13px;pointer-events:none}
+.wk-search-input{width:100%;padding:7px 10px 7px 28px;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:12px;font-family:var(--sans)}
+.wk-search-input:focus{outline:none;border-color:var(--accent2)}
+.wk-content{flex:1;overflow:auto;padding:16px 20px 60px}
+.wk-grid{display:grid;grid-template-columns:150px repeat(6,minmax(150px,1fr));gap:5px;min-width:1080px}
+.wk-daycell{background:var(--surface);border-radius:8px;padding:7px 4px;text-align:center;border:1px solid var(--border)}
+.wk-daycell.today{background:rgba(196,169,107,.18);border-color:var(--accent2)}
+.wk-daycell-name{font-family:var(--cond);font-size:13px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.05em}
+.wk-daycell-date{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:1px}
+.wk-group-row{display:grid;grid-template-columns:150px repeat(6,minmax(150px,1fr));gap:5px;margin-top:8px;align-items:start;border-top:1px solid var(--border);padding-top:8px}
+.wk-group-label{display:flex;align-items:center;gap:7px;padding:8px 6px}
+.wk-group-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.wk-group-name{font-family:var(--cond);font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;line-height:1.1}
+.wk-group-count{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:1px}
+.wk-lanes{grid-column:2 / span 6}
+.wk-lane{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:5px}
+.wk-empty-row{font-size:10px;color:var(--text3);font-style:italic;padding:8px 4px}
+.wk-entry{border-radius:6px;padding:5px 8px;overflow:hidden;transition:box-shadow .3s;cursor:default}
+.wk-entry-cust{font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk-entry-addr{font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk-entry-memo{font-size:9px;color:#fde68a;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.wk-search-results{display:flex;flex-direction:column;gap:6px}
+.wk-search-item{display:flex;flex-direction:column;gap:2px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:background .12s}
+.wk-search-item:hover{background:var(--surface2)}
+.wk-search-item-top{display:flex;align-items:center;gap:8px}
+.wk-search-item-group{font-family:var(--mono);font-size:9px;font-weight:700;text-transform:uppercase}
+.wk-search-item-date{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text3)}
+.wk-search-item-cust{font-size:12px;font-weight:700}
+.wk-search-item-addr{font-size:10px;color:var(--text3)}
+
 </style>
 </head>
 <body>
@@ -641,6 +684,7 @@ tbody tr{animation:fadeIn .12s ease both}
   <div class="main-tabs">
     <button class="main-tab active" id="tab-dispo" onclick="switchPage('dispo')">📋 Dispo</button>
     <button class="main-tab" id="tab-kalender" onclick="switchPage('kalender')">📅 Kalender</button>
+    <button class="main-tab" id="tab-woche" onclick="switchPage('woche')">🗓 Wochenkalender</button>
   </div>
   <div class="conn-pills">
     <div class="conn-pill"><div class="conn-dot" id="dot-montage"></div><span>PE-MONTAGE</span></div>
@@ -785,6 +829,31 @@ tbody tr{animation:fadeIn .12s ease both}
   <button class="sel-bar-btn" onclick="toggleSelectMode()" style="background:rgba(240,128,128,.08);border-color:rgba(240,128,128,.25);color:var(--fix)">✕</button>
 </div>
 
+<!-- ══ PAGE: WOCHENKALENDER (Gesamtübersicht aller Gruppen) ══ -->
+<div class="page" id="page-woche">
+  <div class="wk-page">
+    <div class="wk-topbar">
+      <button class="wk-nav-btn" onclick="wkShiftWeek(-7)" title="Vorherige Woche">‹</button>
+      <button class="wk-today-btn" onclick="wkGoToday()">Heute</button>
+      <button class="wk-nav-btn" onclick="wkShiftWeek(7)" title="Nächste Woche">›</button>
+      <span class="wk-kw-label" id="wkKwLabel">KW —</span>
+      <span class="wk-range-label" id="wkRangeLabel"></span>
+      <div class="wk-search-wrap">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/></svg>
+        <input class="wk-search-input" type="text" id="wkSearchInput" placeholder="Auftrag / Kunde / Adresse suchen — über alle Gruppen…" oninput="renderWochenkalender()">
+      </div>
+    </div>
+    <div class="wk-content" id="wkContent">
+      <div style="padding:40px;text-align:center;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:12px">🗓</div>
+        <div style="font-family:var(--mono);font-size:12px">Lade Wochenkalender…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
 <!-- MULTI SEND MODAL -->
 <div class="modal-bg" id="multiSendModal" style="display:none">
   <div class="modal-box">
@@ -842,6 +911,7 @@ function switchPage(page) {
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   document.getElementById('tab-' + page).classList.add('active');
+  if (page === 'woche') renderWochenkalender();
 }
 
 // ══════════════════════════════════════════════
@@ -884,6 +954,7 @@ function loadMontageEntries() {
       ];
       updateKalStats();
       renderKalContent();
+      renderWochenkalender();
     }, err => console.warn('Montage entries err:', err));
 }
 
@@ -912,6 +983,7 @@ function loadAllKalenderEntries() {
         ];
         updateKalStats();
         renderKalContent();
+        renderWochenkalender();
       }, err => console.warn(`Kalender team ${team.id} err:`, err));
   });
 }
@@ -1126,6 +1198,217 @@ function toggleKalGroup(id) {
     const arrow = grpEl.querySelector('.kal-group-collapse');
     if (arrow) arrow.style.transform = kalGroupCollapsed[id] ? 'rotate(-90deg)' : '';
   }
+}
+
+// ══════════════════════════════════════════════
+// WOCHENKALENDER — Gesamtübersicht aller Gruppen
+// Zeilen = Gruppen (URIM/PE-Montage zuerst, dann alle
+// PE-KALENDER Gruppen alphabetisch), Spalten = Mo–Sa.
+// Mehrtägige Aufträge werden als durchgehender Balken
+// über die Tage dargestellt. Suche wirkt gruppen- und
+// wochenübergreifend über alle Einträge.
+// ══════════════════════════════════════════════
+let wkWeekBase = new Date();
+let wkSearchResultsCache = [];
+
+function wkShiftWeek(days) {
+  const n = new Date(wkWeekBase);
+  n.setDate(n.getDate() + days);
+  wkWeekBase = n;
+  renderWochenkalender();
+}
+function wkGoToday() {
+  wkWeekBase = new Date();
+  renderWochenkalender();
+}
+
+function wkGetWeekDays(base) {
+  const d = new Date(base);
+  const day = d.getDay();
+  const diffToMon = (day === 0) ? -6 : 1 - day;
+  const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMon);
+  return Array.from({ length: 6 }, (_, i) => new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i));
+}
+function wkGetISOWeekNumber(dIn) {
+  const d = new Date(Date.UTC(dIn.getFullYear(), dIn.getMonth(), dIn.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+function wkDaysBetween(s, e) {
+  if (!s || !e) return 1;
+  return Math.max(1, Math.round((new Date(e) - new Date(s)) / 86400000) + 1);
+}
+
+function wkPackLanes(entries, weekDays) {
+  const weekStart = toLocalDateStr(weekDays[0]), weekEnd = toLocalDateStr(weekDays[5]);
+  const visible = entries.filter(e => {
+    const s = (e.deliveryDate || '').substring(0, 10);
+    const en = (e.endDate || e.deliveryDate || '').substring(0, 10) || s;
+    return s <= weekEnd && en >= weekStart;
+  });
+  const sorted = [...visible].sort((a, b) => {
+    const aS = (a.deliveryDate || '').substring(0, 10), bS = (b.deliveryDate || '').substring(0, 10);
+    const aE = (a.endDate || a.deliveryDate || '').substring(0, 10) || aS, bE = (b.endDate || b.deliveryDate || '').substring(0, 10) || bS;
+    const aD = wkDaysBetween(aS, aE), bD = wkDaysBetween(bS, bE);
+    if (bD !== aD) return bD - aD;
+    if (aS !== bS) return aS < bS ? -1 : 1;
+    return (a.createdAt || '') < (b.createdAt || '') ? -1 : 1;
+  });
+  const laneDays = [];
+  const entryLanes = new Map();
+  const weekDayStrs = weekDays.map(d => toLocalDateStr(d));
+  sorted.forEach(e => {
+    const s = (e.deliveryDate || '').substring(0, 10), en = (e.endDate || e.deliveryDate || '').substring(0, 10);
+    const occupied = new Set();
+    weekDayStrs.forEach(ds => { if (ds >= s && ds <= en) occupied.add(ds); });
+    let lane = 0;
+    while (lane < laneDays.length) {
+      let conflict = false;
+      for (const d of occupied) { if (laneDays[lane].has(d)) { conflict = true; break; } }
+      if (!conflict) break;
+      lane++;
+    }
+    if (!laneDays[lane]) laneDays[lane] = new Set();
+    occupied.forEach(d => laneDays[lane].add(d));
+    entryLanes.set(e.id, lane);
+  });
+  return { entryLanes, numLanes: Math.max(laneDays.length, 1), visible: sorted };
+}
+
+function wkGetGroups() {
+  const map = {};
+  kalAllEntries.forEach(e => {
+    if (!map[e.groupId]) map[e.groupId] = { id: e.groupId, name: e.groupName, color: e.groupColor, entries: [] };
+    map[e.groupId].entries.push(e);
+  });
+  return Object.values(map).sort((a, b) => {
+    if (a.id === 'urim') return -1;
+    if (b.id === 'urim') return 1;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+}
+
+function wkJumpToEntry(entry) {
+  const d = (entry.deliveryDate || '').substring(0, 10);
+  if (d) wkWeekBase = new Date(d + 'T00:00:00');
+  const input = document.getElementById('wkSearchInput');
+  if (input) input.value = '';
+  renderWochenkalender();
+  setTimeout(() => {
+    const el = document.getElementById('wk-entry-' + entry.id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.boxShadow = '0 0 0 2px #fff, 0 0 14px 2px rgba(255,255,255,.5)';
+      setTimeout(() => { el.style.boxShadow = ''; }, 2500);
+    }
+  }, 120);
+}
+
+function renderWochenkalender() {
+  const contentEl = document.getElementById('wkContent');
+  if (!contentEl) return;
+
+  const days = wkGetWeekDays(wkWeekBase);
+  const kw = wkGetISOWeekNumber(wkWeekBase);
+  const kwLabelEl = document.getElementById('wkKwLabel');
+  const rangeLabelEl = document.getElementById('wkRangeLabel');
+  if (kwLabelEl) kwLabelEl.textContent = 'KW ' + kw;
+  if (rangeLabelEl) rangeLabelEl.textContent =
+    days[0].toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' }) + ' – ' +
+    days[5].toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const searchInput = document.getElementById('wkSearchInput');
+  const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+  // ── Suche: gruppen- und wochenübergreifend ──
+  if (q) {
+    const groups = wkGetGroups();
+    const results = [];
+    groups.forEach(g => {
+      g.entries.forEach(e => {
+        const hay = `${e.customer || ''} ${e.address || ''} ${e.auftragsNr || ''} ${e.memo || ''}`.toLowerCase();
+        if (hay.includes(q)) results.push({ ...e, __group: g });
+      });
+    });
+    results.sort((a, b) => (b.deliveryDate || '').localeCompare(a.deliveryDate || ''));
+    wkSearchResultsCache = results;
+    if (!results.length) {
+      contentEl.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3);font-size:12px">Keine Treffer für "${q}"</div>`;
+      return;
+    }
+    contentEl.innerHTML = `<div class="wk-search-results">
+      ${results.map((e, idx) => `
+        <div class="wk-search-item" onclick="wkJumpToEntry(wkSearchResultsCache[${idx}])">
+          <div class="wk-search-item-top">
+            <div class="wk-group-dot" style="background:${e.__group.color}"></div>
+            <span class="wk-search-item-group" style="color:${e.__group.color}">${e.__group.name}</span>
+            <span class="wk-search-item-date">${e.deliveryDate ? new Date(e.deliveryDate).toLocaleDateString('de-CH') : ''}</span>
+          </div>
+          <div class="wk-search-item-cust">${e.customer || '—'}</div>
+          <div class="wk-search-item-addr">${e.address || ''}</div>
+        </div>`).join('')}
+    </div>`;
+    return;
+  }
+
+  if (!kalAllEntries.length) {
+    contentEl.innerHTML = `<div style="padding:60px;text-align:center;color:var(--text3)">
+      <div style="font-size:40px;margin-bottom:14px;opacity:.3">🗓</div>
+      <div style="font-family:var(--mono);font-size:12px">Keine Kalender-Einträge gefunden</div>
+    </div>`;
+    return;
+  }
+
+  const groups = wkGetGroups();
+  const weekStart = toLocalDateStr(days[0]), weekEnd = toLocalDateStr(days[5]);
+  const todayStr = toLocalDateStr(new Date());
+  const DAY_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+  let html = `<div class="wk-grid"><div></div>`;
+  days.forEach((day, di) => {
+    const dStr = toLocalDateStr(day);
+    html += `<div class="wk-daycell${dStr === todayStr ? ' today' : ''}"><div class="wk-daycell-name">${DAY_SHORT[di]}</div><div class="wk-daycell-date">${day.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })}</div></div>`;
+  });
+  html += `</div>`;
+
+  groups.forEach(g => {
+    const { entryLanes, numLanes, visible } = wkPackLanes(g.entries, days);
+    html += `<div class="wk-group-row">
+      <div class="wk-group-label">
+        <div class="wk-group-dot" style="background:${g.color}"></div>
+        <div>
+          <div class="wk-group-name" style="color:${g.color}">${g.name}</div>
+          <div class="wk-group-count">${visible.length} Auftr.</div>
+        </div>
+      </div>
+      <div class="wk-lanes">`;
+    if (!visible.length) {
+      html += `<div class="wk-empty-row">— keine Termine diese Woche —</div>`;
+    } else {
+      for (let lane = 0; lane < numLanes; lane++) {
+        const laneEntries = visible.filter(e => entryLanes.get(e.id) === lane);
+        html += `<div class="wk-lane">` + laneEntries.map(e => {
+          const s = (e.deliveryDate || '').substring(0, 10);
+          const en = (e.endDate || e.deliveryDate || '').substring(0, 10) || s;
+          const clipS = s < weekStart ? weekStart : s;
+          const clipE = en > weekEnd ? weekEnd : en;
+          const startIdx = days.findIndex(d => toLocalDateStr(d) === clipS);
+          const endIdx = days.findIndex(d => toLocalDateStr(d) === clipE);
+          const colStart = (startIdx < 0 ? 0 : startIdx) + 1;
+          const colEnd = (endIdx < 0 ? 5 : endIdx) + 2;
+          return `<div class="wk-entry" id="wk-entry-${e.id}" style="grid-column:${colStart} / ${colEnd};background:${g.color}22;border-left:3px solid ${g.color};opacity:${e.isDone ? 0.45 : 1}">
+            <div class="wk-entry-cust">${e.customer || '—'}</div>
+            <div class="wk-entry-addr">${e.address || ''}</div>
+            ${e.memo ? `<div class="wk-entry-memo">📝 ${e.memo}</div>` : ''}
+          </div>`;
+        }).join('') + `</div>`;
+      }
+    }
+    html += `</div></div>`;
+  });
+
+  contentEl.innerHTML = html;
 }
 
 // ══════════════════════════════════════════════

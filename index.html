@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
 const firebaseConfigMontage = {
     apiKey: "AIzaSyD25cVhiguQKP4PTD8evGI4CxSh7rglbBs",
@@ -25,8 +26,34 @@ const firebaseConfigKalender = {
     messagingSenderId: "993655186874",
     appId: "1:993655186874:web:068a06ce160cd611e1e983"
 };
-try { window._appMontage = firebase.initializeApp(firebaseConfigMontage, 'montage'); window._dbMontage = firebase.firestore(window._appMontage); } catch(e) { console.warn(e); }
-try { window._appKalender = firebase.initializeApp(firebaseConfigKalender, 'kalender'); window._dbKalender = firebase.firestore(window._appKalender); } catch(e) { console.warn(e); }
+
+// ============================================================
+// Anmeldedaten für die beiden Firebase-Projekte — dieselben
+// Servicekonten, die auch PE-MONTAGE und PE-KALENDER selbst im
+// Hintergrund nutzen. Seit der Sicherheitshärtung (Aug 2026)
+// verlangen beide Projekte eine echte Anmeldung; ohne sie schlägt
+// jedes Senden mit "Missing or insufficient permissions" fehl.
+// ============================================================
+const MONTAGE_LOGIN  = { email: "zugang-montage@pe-intern.local", password: "PE-Zugang-3161m" };
+const KALENDER_LOGIN = { email: "zugang@pe-intern.local",         password: "PE-Zugang-3161x" };
+
+try {
+    window._appMontage = firebase.initializeApp(firebaseConfigMontage, 'montage');
+    window._dbMontage = firebase.firestore(window._appMontage);
+    window._authMontage = firebase.auth(window._appMontage);
+    window._montageAuthPromise = window._authMontage.signInWithEmailAndPassword(MONTAGE_LOGIN.email, MONTAGE_LOGIN.password)
+        .then(() => { window._montageReady = true; document.dispatchEvent(new Event('montageAuthReady')); })
+        .catch(err => { console.error('PE-MONTAGE Anmeldung fehlgeschlagen:', err.message); window._montageReady = false; });
+} catch(e) { console.warn(e); }
+
+try {
+    window._appKalender = firebase.initializeApp(firebaseConfigKalender, 'kalender');
+    window._dbKalender = firebase.firestore(window._appKalender);
+    window._authKalender = firebase.auth(window._appKalender);
+    window._kalenderAuthPromise = window._authKalender.signInWithEmailAndPassword(KALENDER_LOGIN.email, KALENDER_LOGIN.password)
+        .then(() => { window._kalenderReady = true; document.dispatchEvent(new Event('kalenderAuthReady')); })
+        .catch(err => { console.error('PE-KALENDER Anmeldung fehlgeschlagen:', err.message); window._kalenderReady = false; });
+} catch(e) { console.warn(e); }
 </script>
 <style>
 :root {
@@ -919,10 +946,19 @@ function switchPage(page) {
 // ══════════════════════════════════════════════
 // FIREBASE
 // ══════════════════════════════════════════════
-document.getElementById('dot-montage').className = 'conn-dot ' + (window._dbMontage ? 'ok' : 'err');
-document.getElementById('dot-kalender').className = 'conn-dot ' + (window._dbKalender ? 'ok' : 'err');
+document.getElementById('dot-montage').className = 'conn-dot err';
+document.getElementById('dot-kalender').className = 'conn-dot err';
+function updateConnDots() {
+  const dotM = document.getElementById('dot-montage');
+  const dotK = document.getElementById('dot-kalender');
+  if (dotM) dotM.className = 'conn-dot ' + (window._montageReady ? 'ok' : 'err');
+  if (dotK) dotK.className = 'conn-dot ' + (window._kalenderReady ? 'ok' : 'err');
+}
+document.addEventListener('montageAuthReady', updateConnDots);
+document.addEventListener('kalenderAuthReady', updateConnDots);
 
-if (window._dbKalender) {
+function initKalenderConfigListener() {
+  if (!window._dbKalender) return;
   window._dbKalender.collection('teams_config').onSnapshot(snap => {
     kalenderTeams = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     document.getElementById('kal-cnt').textContent = `PE-KALENDER (${kalenderTeams.length})`;
@@ -932,6 +968,8 @@ if (window._dbKalender) {
     loadAllKalenderEntries();
   }, err => console.error(err));
 }
+if (window._kalenderReady) initKalenderConfigListener();
+else document.addEventListener('kalenderAuthReady', initKalenderConfigListener);
 
 // Load PE-Montage entries
 let _montageSub = null;
@@ -990,8 +1028,9 @@ function loadAllKalenderEntries() {
   });
 }
 
-// Start loading montage entries immediately
-loadMontageEntries();
+// Erst laden, wenn die Anmeldung bei PE-MONTAGE erfolgreich war
+if (window._montageReady) loadMontageEntries();
+else document.addEventListener('montageAuthReady', loadMontageEntries);
 
 function renderKalenderTeamsList() {
   const el = document.getElementById('kalTeamsList');
@@ -1740,6 +1779,7 @@ function updateSelBar(){const bar=document.getElementById('selBar');const cnt=se
 // ══════════════════════════════════════════════
 async function sendToMontage(entry,calType){
   if(!window._dbMontage)throw new Error('PE-Montage nicht verbunden');
+  await window._montageAuthPromise;
   const calId=`cal-${genId()}`;
   await window._dbMontage.collection('artifacts/montage-pe-a5f79/public/data/calentries').doc(calId).set({
     id:calId,createdAt:new Date().toISOString(),isDone:false,isBilled:false,entryType:'LIEFERUNG',
@@ -1757,6 +1797,7 @@ async function sendToMontage(entry,calType){
 }
 async function sendToKalender(entry,teamId,calType){
   if(!window._dbKalender)throw new Error('PE-Kalender nicht verbunden');
+  await window._kalenderAuthPromise;
   const id=`cal-${genId()}`;
   await window._dbKalender.collection(`teams_cal_${teamId}`).doc(id).set({
     id,createdAt:new Date().toISOString(),isDone:false,isBilled:false,entryType:'LIEFERUNG',

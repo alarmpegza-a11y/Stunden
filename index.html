@@ -52,7 +52,7 @@ try {
     window._authKalender = firebase.auth(window._appKalender);
     window._kalenderAuthPromise = window._authKalender.signInWithEmailAndPassword(KALENDER_LOGIN.email, KALENDER_LOGIN.password)
         .then(() => { window._kalenderReady = true; document.dispatchEvent(new Event('kalenderAuthReady')); })
-        .catch(err => { console.error('PE-KALENDER Anmeldung fehlgeschlagen:', err.message); window._kalenderReady = false; });
+        .catch(err => { console.error('PE-KALENDER Anmeldung fehlgeschlagen:', err.message); window._kalenderReady = false; window._kalenderAuthError = err.message; document.dispatchEvent(new Event('kalenderAuthFailed')); });
 } catch(e) { console.warn(e); }
 </script>
 <style>
@@ -956,6 +956,11 @@ function updateConnDots() {
 }
 document.addEventListener('montageAuthReady', updateConnDots);
 document.addEventListener('kalenderAuthReady', updateConnDots);
+document.addEventListener('kalenderAuthFailed', () => {
+  updateConnDots();
+  const pill = document.getElementById('kal-cnt'); if(pill) pill.textContent = 'PE-KALENDER ✕';
+  const el = document.getElementById('kalTeamsList'); if(el) el.innerHTML = '<div style="font-size:11px;color:var(--fix);padding:4px 0;line-height:1.5">⚠ Anmeldung fehlgeschlagen.<br>Konto <b>zugang@pe-intern.local</b> in Firebase-Projekt <b>pe-kalender-alle-gruppen</b> (Authentication) prüfen.</div>';
+});
 
 function initKalenderConfigListener() {
   if (!window._dbKalender) return;
@@ -966,7 +971,7 @@ function initKalenderConfigListener() {
     if (state.length) render();
     // Load all kalender entries live
     loadAllKalenderEntries();
-  }, err => console.error(err));
+  }, err => { console.error('teams_config Lesefehler:', err); const el=document.getElementById('kalTeamsList'); if(el) el.innerHTML='<div style="font-size:11px;color:var(--fix);padding:4px 0;line-height:1.5">⚠ Zugriff verweigert beim Laden der Gruppen.<br>Firestore-Regeln / Anmeldung von <b>pe-kalender-alle-gruppen</b> prüfen.</div>'; });
 }
 if (window._kalenderReady) initKalenderConfigListener();
 else document.addEventListener('kalenderAuthReady', initKalenderConfigListener);
@@ -995,6 +1000,7 @@ function loadMontageEntries() {
       updateKalStats();
       renderKalContent();
       renderWochenkalender();
+      if(state&&state.length)render();
     }, err => console.warn('Montage entries err:', err));
 }
 
@@ -1024,6 +1030,7 @@ function loadAllKalenderEntries() {
         updateKalStats();
         renderKalContent();
         renderWochenkalender();
+        if(state&&state.length)render();
       }, err => console.warn(`Kalender team ${team.id} err:`, err));
   });
 }
@@ -1897,6 +1904,36 @@ function showToast(type,msg){const wrap=document.getElementById('toastWrap');con
 // ══════════════════════════════════════════════
 // RENDER (Dispo)
 // ══════════════════════════════════════════════
+// ── Zuletzt vor Ort: welche Gruppe hatte diesen Auftrag zuletzt im Kalender? ──
+function findLastOnSite(order){
+  const nr=(order.auftragsNrClean||'').toLowerCase();
+  const addr=(order.address||'').trim().toLowerCase();
+  if(!nr&&!addr)return null;
+  const today=new Date().toISOString().substring(0,10);
+  let past=null,future=null;
+  for(const e of kalAllEntries){
+    const eNr=cleanAuftragsNr(e.auftragsNr||'').toLowerCase();
+    const eAddr=(e.address||'').trim().toLowerCase();
+    const match=(nr&&eNr&&nr===eNr)||(addr&&eAddr&&addr===eAddr);
+    if(!match)continue;
+    const d=(e.deliveryDate||'').substring(0,10);
+    if(!d)continue;
+    const rec={date:d,groupName:e.groupName||'?',groupColor:e.groupColor||'#8a9bb0'};
+    if(d<=today){ if(!past||d>past.date)past=rec; }
+    else { if(!future||d<future.date)future=rec; }
+  }
+  if(past)return {...past,kind:'past'};
+  if(future)return {...future,kind:'future'};
+  return null;
+}
+function lastOnSiteBadge(order,compact){
+  const last=findLastOnSite(order);
+  if(!last)return '';
+  const dd=last.date.substring(8,10)+'.'+last.date.substring(5,7)+'.';
+  const label=last.kind==='past'?'👷 Zuletzt':'📅 Geplant';
+  if(compact)return `<span class="badge" style="background:${last.groupColor}22;color:${last.groupColor};border:1px solid ${last.groupColor}55" title="${label}: ${last.groupName} · ${dd}">${last.groupName}</span>`;
+  return `<div style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;background:${last.groupColor}22;color:${last.groupColor};border:1px solid ${last.groupColor}55;border-radius:5px;padding:2px 7px" title="${last.groupName} · ${dd}">${label}: ${last.groupName} · ${dd}</div>`;
+}
 function render(){if(!state.length)return;renderSidebar();if(currentView==='list')renderList();else renderDayView()}
 function renderSidebar(){
   const maxDay=Math.max(1,...Object.keys(DAYS).map(d=>state.filter(x=>x.datum===d).length));
@@ -1921,7 +1958,7 @@ function renderList(){
     const sentBadges=d.sentTo&&d.sentTo.length>0?d.sentTo.map(s=>`<span class="badge badge-sent">✓ ${s.label}</span>`).join(''):'';
     const cbCell=selectMode?`<td class="cb-cell"><div class="cb${isSelected?' checked':''}">✓</div></td>`:'';
     const sendCell=selectMode?`<td></td>`:`<td><div style="display:flex;flex-direction:column;gap:3px"><button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}" data-send-id="${d._id}" onclick="event.stopPropagation();openSendDrop('${d._id}',this)">${d.sentTo&&d.sentTo.length>0?`✓ Gesendet (${d.sentTo.length}) ▼`:'📤 Senden ▼'}</button>${sentBadges}</div></td>`;
-    html+=`<tr class="${d.has_montage?'has-montage':'no-montage'}${isSelected?' selected-row':''}" data-row-id="${d._id}" style="animation-delay:${Math.min(i,20)*0.01}s;cursor:${selectMode?'pointer':'default'}" ${selectMode?`onclick="toggleSelect('${d._id}')"`:''}>${cbCell}<td class="td-auftrag">${d.auftrag||'—'}</td><td><div class="td-kunde-name">${d.kunde}</div><div class="td-kunde-sub" title="${d.projekt}">${d.projekt}</div></td><td class="td-ort"><div style="font-size:12px">${d.strasse||''}</div><div style="font-size:11px;color:var(--text3)">${d.plz} ${d.ort}</div></td><td class="td-ele" style="text-align:right">${d.eleNum>0?d.eleNum+'&nbsp;ELE':'—'}</td><td>${d.has_montage?'<span class="badge badge-montage">Montage</span>':''}${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}</td><td><span class="memo-text" title="${d.memo}">${d.memo||'—'}</span></td>${sendCell}</tr>`;
+    html+=`<tr class="${d.has_montage?'has-montage':'no-montage'}${isSelected?' selected-row':''}" data-row-id="${d._id}" style="animation-delay:${Math.min(i,20)*0.01}s;cursor:${selectMode?'pointer':'default'}" ${selectMode?`onclick="toggleSelect('${d._id}')"`:''}>${cbCell}<td class="td-auftrag">${d.auftrag||'—'}</td><td><div class="td-kunde-name">${d.kunde}</div><div class="td-kunde-sub" title="${d.projekt}">${d.projekt}</div></td><td class="td-ort"><div style="font-size:12px">${d.strasse||''}</div><div style="font-size:11px;color:var(--text3)">${d.plz} ${d.ort}</div></td><td class="td-ele" style="text-align:right">${d.eleNum>0?d.eleNum+'&nbsp;ELE':'—'}</td><td>${d.has_montage?'<span class="badge badge-montage">Montage</span>':''}${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}</td><td><span class="memo-text" title="${d.memo}">${d.memo||'—'}</span>${lastOnSiteBadge(d)}</td>${sendCell}</tr>`;
   });
   document.getElementById('tableBody').innerHTML=html;
   document.getElementById('th-cb').style.display=selectMode?'table-cell':'none';
@@ -1929,7 +1966,7 @@ function renderList(){
 function renderDayView(){
   document.getElementById('dayColGrid').innerHTML=Object.entries(DAYS).map(([date,label])=>{
     const items=getFiltered().filter(d=>d.datum===date);const mont=items.filter(d=>d.has_montage).length;
-    const cards=items.map(d=>`<div class="day-card${d.has_montage?' montage':''}"><div class="day-card-kunde">${d.kunde}</div><div class="day-card-ort">${d.plz} ${d.ort}</div><div class="day-card-badges">${d.has_montage?'<span class="badge badge-montage">M</span>':''}${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}${d.sentTo&&d.sentTo.length>0?'<span class="badge badge-sent">✓</span>':''}<div class="day-card-send"><button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}" style="font-size:9px;padding:3px 8px" data-send-id="${d._id}" onclick="event.stopPropagation();openSendDrop('${d._id}',this)">${d.sentTo&&d.sentTo.length>0?'✓':'📤'}</button></div></div></div>`).join('');
+    const cards=items.map(d=>`<div class="day-card${d.has_montage?' montage':''}"><div class="day-card-kunde">${d.kunde}</div><div class="day-card-ort">${d.plz} ${d.ort}</div><div class="day-card-badges">${d.has_montage?'<span class="badge badge-montage">M</span>':''}${d.termin_fix?'<span class="badge badge-fix">FIX</span>':'<span class="badge badge-prov">Prov.</span>'}${d.sentTo&&d.sentTo.length>0?'<span class="badge badge-sent">✓</span>':''}${lastOnSiteBadge(d,true)}<div class="day-card-send"><button class="send-btn ${d.sentTo&&d.sentTo.length>0?'done':'idle'}" style="font-size:9px;padding:3px 8px" data-send-id="${d._id}" onclick="event.stopPropagation();openSendDrop('${d._id}',this)">${d.sentTo&&d.sentTo.length>0?'✓':'📤'}</button></div></div></div>`).join('');
     return `<div><div class="day-col-header"><div class="day-col-title">${label}</div><div class="day-col-meta">${items.length} Auftr. · <span style="color:var(--montage)">${mont}× M</span></div></div><div class="day-col-body">${cards||'<div style="padding:12px;font-size:11px;color:var(--text3)">Keine Einträge</div>'}</div></div>`;
   }).join('');
 }
